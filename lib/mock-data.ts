@@ -47,5 +47,5 @@ export const mockBeers: Beer[] = beerNames.map((name, i) => ({
   type: types[Math.floor(seededRandom(i + 100) * types.length)],
   rating: Math.round((5 + seededRandom(i + 200) * 5) * 10) / 10,
   price: Math.round((80 + seededRandom(i + 300) * 920) * 100) / 100,
-  image: `https://placehold.co/300x400/f5f0e8/78716c?text=${encodeURIComponent(name.split(" ")[0])}`,
+  image: `/api/beer-image?id=${i + 1}&name=${encodeURIComponent(name)}`,
 }));
