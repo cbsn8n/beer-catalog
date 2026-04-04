@@ -24,10 +24,20 @@ export function Hero() {
             База пива от Ивана
           </p>
           <div className="mt-8">
-            <Button size="lg" className="gap-2 bg-amber-600 hover:bg-amber-700" disabled>
-              <Plus className="h-5 w-5" />
-              Добавить пиво в базу
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block"
+            >
+              <Button
+                size="lg"
+                className="relative gap-2 bg-amber-600 px-8 py-6 text-lg font-bold shadow-lg shadow-amber-600/30 hover:bg-amber-700 hover:shadow-xl hover:shadow-amber-600/40 transition-all duration-300"
+              >
+                <span className="absolute inset-0 rounded-md bg-amber-400/20 animate-pulse" />
+                <Plus className="h-5 w-5" />
+                Добавить пиво в базу
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
       </div>

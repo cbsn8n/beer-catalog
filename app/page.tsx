@@ -55,6 +55,10 @@ export default function Home() {
     );
   }, []);
 
+  const setAllCountries = useCallback((countries: string[]) => {
+    setSelectedCountries(countries);
+  }, []);
+
   const filtered = useMemo(() => {
     return beers.filter((beer) => {
       if (selectedSorts.length > 0 && (!beer.sort || !selectedSorts.includes(beer.sort)))
@@ -95,6 +99,7 @@ export default function Home() {
               onToggleCountry={toggleCountry}
               onSetMinRating={setMinRating}
               onSetPriceRange={setPriceRange}
+              onSetAllCountries={setAllCountries}
             />
             <BeerGrid beers={filtered} />
           </>

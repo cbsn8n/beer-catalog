@@ -18,9 +18,9 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
           {beer.image ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={`${beer.image}?w=300&q=70`}
+              src={`${beer.image}?w=400&q=70`}
               alt={beer.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           ) : (

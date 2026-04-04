@@ -2,6 +2,9 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Star, Globe } from "lucide-react";
+import { getFlag } from "@/lib/country-flags";
 import type { Beer } from "@/lib/types";
 import { useMemo } from "react";
 
@@ -18,6 +21,7 @@ interface FiltersProps {
   onToggleCountry: (c: string) => void;
   onSetMinRating: (r: number | null) => void;
   onSetPriceRange: (range: [number, number]) => void;
+  onSetAllCountries: (countries: string[]) => void;
 }
 
 export function Filters({
@@ -31,8 +35,8 @@ export function Filters({
   onToggleCountry,
   onSetMinRating,
   onSetPriceRange,
+  onSetAllCountries,
 }: FiltersProps) {
-  // Extract unique sorts and countries from data
   const sorts = useMemo(() => {
     const set = new Set<string>();
     beers.forEach((b) => { if (b.sort) set.add(b.sort); });
@@ -46,9 +50,10 @@ export function Filters({
     });
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 15)
       .map(([c]) => c);
   }, [beers]);
+
+  const allCountriesSelected = selectedCountries.length === countries.length && countries.length > 0;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -77,9 +82,26 @@ export function Filters({
 
         {/* Countries */}
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Страны
-          </h3>
+          <div className="mb-3 flex items-center gap-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+              Страны
+            </h3>
+            <Button
+              variant={allCountriesSelected ? "default" : "outline"}
+              size="sm"
+              className="h-6 gap-1 px-2 text-xs"
+              onClick={() => {
+                if (allCountriesSelected) {
+                  onSetAllCountries([]);
+                } else {
+                  onSetAllCountries([...countries]);
+                }
+              }}
+            >
+              <Globe className="h-3 w-3" />
+              Все
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {countries.map((country) => (
               <Badge
@@ -88,6 +110,7 @@ export function Filters({
                 className="cursor-pointer select-none transition-colors hover:bg-amber-100"
                 onClick={() => onToggleCountry(country)}
               >
+                <span className="mr-1">{getFlag(country)}</span>
                 {country}
               </Badge>
             ))}
@@ -107,6 +130,11 @@ export function Filters({
                 className="cursor-pointer select-none transition-colors hover:bg-amber-100"
                 onClick={() => onSetMinRating(minRating === r ? null : r)}
               >
+                <span className="mr-1 flex">
+                  {Array.from({ length: Math.min(r - 4, 5) }).map((_, i) => (
+                    <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  ))}
+                </span>
                 от {r}
               </Badge>
             ))}

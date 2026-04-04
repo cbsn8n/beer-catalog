@@ -52,7 +52,7 @@ export async function GET(
   if (!fs.existsSync(thumbPath)) {
     try {
       await sharp(filePath)
-        .resize(width, width, { fit: "cover", position: "centre" })
+        .resize({ height: width, fit: "inside" })
         .webp({ quality })
         .toFile(thumbPath);
     } catch {
