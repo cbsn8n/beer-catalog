@@ -14,11 +14,11 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3) }}
     >
       <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-        <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
+        <div className="relative aspect-square overflow-hidden bg-stone-100">
           {beer.image ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={beer.image}
+              src={`${beer.image}?w=300&q=70`}
               alt={beer.name}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
