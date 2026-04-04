@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { BeerCard } from "./beer-card";
-import type { Beer } from "@/lib/mock-data";
+import type { Beer } from "@/lib/types";
 
 const PAGE_SIZE = 30;
 
@@ -15,7 +15,6 @@ export function BeerGrid({ beers }: BeerGridProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Reset visible count when beers list changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [beers]);
@@ -39,9 +38,7 @@ export function BeerGrid({ beers }: BeerGridProps) {
     );
     const el = loaderRef.current;
     if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    };
+    return () => { if (el) observer.unobserve(el); };
   }, [hasMore, beers.length]);
 
   if (beers.length === 0) {
@@ -54,6 +51,9 @@ export function BeerGrid({ beers }: BeerGridProps) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
+      <p className="mb-4 text-sm text-gray-500">
+        Найдено: {beers.length}
+      </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visible.map((beer, i) => (
           <BeerCard key={beer.id} beer={beer} index={i} />

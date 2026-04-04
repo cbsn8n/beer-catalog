@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# beer images (too large for git, synced at runtime)
+/data/images/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

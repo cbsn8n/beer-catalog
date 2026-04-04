@@ -1,22 +1,51 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { Filters } from "@/components/filters";
 import { BeerGrid } from "@/components/beer-grid";
 import { Footer } from "@/components/footer";
-import { mockBeers } from "@/lib/mock-data";
+import type { Beer } from "@/lib/types";
 
 export default function Home() {
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [minRating, setMinRating] = useState<number | null>(null);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
 
-  const toggleType = useCallback((type: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+  useEffect(() => {
+    fetch("/api/beers")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: Beer[]) => {
+        setBeers(data);
+        // Set price range to actual max
+        const maxP = Math.max(...data.map((b) => b.price ?? 0), 100);
+        setPriceRange([0, Math.ceil(maxP / 10) * 10]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  const maxPrice = useMemo(() => {
+    const m = Math.max(...beers.map((b) => b.price ?? 0), 100);
+    return Math.ceil(m / 10) * 10;
+  }, [beers]);
+
+  const toggleSort = useCallback((sort: string) => {
+    setSelectedSorts((prev) =>
+      prev.includes(sort) ? prev.filter((s) => s !== sort) : [...prev, sort]
     );
   }, []);
 
@@ -27,31 +56,49 @@ export default function Home() {
   }, []);
 
   const filtered = useMemo(() => {
-    return mockBeers.filter((beer) => {
-      if (selectedTypes.length > 0 && !selectedTypes.includes(beer.type)) return false;
-      if (selectedCountries.length > 0 && !selectedCountries.includes(beer.country)) return false;
-      if (minRating !== null && beer.rating < minRating) return false;
-      if (beer.price < priceRange[0] || beer.price > priceRange[1]) return false;
+    return beers.filter((beer) => {
+      if (selectedSorts.length > 0 && (!beer.sort || !selectedSorts.includes(beer.sort)))
+        return false;
+      if (selectedCountries.length > 0 && (!beer.country || !selectedCountries.includes(beer.country)))
+        return false;
+      if (minRating !== null && (beer.rating == null || beer.rating < minRating))
+        return false;
+      if (beer.price != null && (beer.price < priceRange[0] || beer.price > priceRange[1]))
+        return false;
       return true;
     });
-  }, [selectedTypes, selectedCountries, minRating, priceRange]);
+  }, [beers, selectedSorts, selectedCountries, minRating, priceRange]);
 
   return (
     <>
       <Header />
       <main className="flex-1">
         <Hero />
-        <Filters
-          selectedTypes={selectedTypes}
-          selectedCountries={selectedCountries}
-          minRating={minRating}
-          priceRange={priceRange}
-          onToggleType={toggleType}
-          onToggleCountry={toggleCountry}
-          onSetMinRating={setMinRating}
-          onSetPriceRange={setPriceRange}
-        />
-        <BeerGrid beers={filtered} />
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+          </div>
+        ) : error ? (
+          <div className="py-16 text-center text-red-500">
+            Ошибка загрузки: {error}
+          </div>
+        ) : (
+          <>
+            <Filters
+              beers={beers}
+              selectedSorts={selectedSorts}
+              selectedCountries={selectedCountries}
+              minRating={minRating}
+              priceRange={priceRange}
+              maxPrice={maxPrice}
+              onToggleSort={toggleSort}
+              onToggleCountry={toggleCountry}
+              onSetMinRating={setMinRating}
+              onSetPriceRange={setPriceRange}
+            />
+            <BeerGrid beers={filtered} />
+          </>
+        )}
       </main>
       <Footer />
     </>
