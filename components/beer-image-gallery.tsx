@@ -1,19 +1,21 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { BeerImage } from "@/lib/types";
 
 export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: string }) {
   const normalized = useMemo(() => {
     const seen = new Set<string>();
-    const result: string[] = [];
+    const result: { main: string; thumb: string }[] = [];
 
     for (const img of images) {
-      const src = img.remote || img.local;
-      if (!src) continue;
-      if (seen.has(src)) continue;
-      seen.add(src);
-      result.push(src);
+      const main = img.local || img.remote;
+      const thumb = img.local ? `${img.local}${img.local.includes("?") ? "&" : "?"}w=240&q=44` : (img.remote || img.local);
+      if (!main) continue;
+      if (seen.has(main)) continue;
+      seen.add(main);
+      result.push({ main, thumb: thumb || main });
     }
 
     return result;
@@ -30,6 +32,8 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
   }
 
   const current = normalized[active];
+  const prev = () => setActive((v) => (v - 1 + normalized.length) % normalized.length);
+  const next = () => setActive((v) => (v + 1) % normalized.length);
 
   return (
     <>
@@ -42,7 +46,7 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
           <div className="flex h-full w-full items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={current}
+              src={current.main}
               alt={alt}
               className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
             />
@@ -52,16 +56,16 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
 
       {normalized.length > 1 && (
         <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-5">
-          {normalized.map((src, idx) => (
+          {normalized.map((item, idx) => (
             <button
-              key={src}
+              key={item.main}
               type="button"
               onClick={() => setActive(idx)}
               className={`overflow-hidden rounded-2xl border bg-white ${idx === active ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
             >
               <div className="aspect-square overflow-hidden bg-stone-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt={`${alt} ${idx + 1}`} className="h-full w-full object-cover" />
+                <img src={item.thumb} alt={`${alt} ${idx + 1}`} className="h-full w-full object-cover" />
               </div>
             </button>
           ))}
@@ -81,8 +85,18 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
             >
               Закрыть
             </button>
+            {normalized.length > 1 && (
+              <>
+                <button type="button" onClick={prev} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow">
+                  <ChevronLeft className="h-5 w-5 text-black" />
+                </button>
+                <button type="button" onClick={next} className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow">
+                  <ChevronRight className="h-5 w-5 text-black" />
+                </button>
+              </>
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current} alt={alt} className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+            <img src={current.main} alt={alt} className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
           </div>
         </div>
       )}

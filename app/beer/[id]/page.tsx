@@ -38,7 +38,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
   const images = beer.images?.length
     ? beer.images.map((img) => ({
         local: img.local ? `${img.local}?w=1000&q=80` : null,
-        remote: img.remote,
+        remote: img.remote ?? null,
       }))
     : beer.image || beer.imageRemote
       ? [{ local: beer.image ? `${beer.image}?w=1000&q=80` : null, remote: beer.imageRemote ?? null }]
