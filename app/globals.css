@@ -117,6 +117,35 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@keyframes hero-bubble-rise {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-140px) scale(1.15);
+    opacity: 0;
+  }
+}
+
+.hero-bubble {
+  animation-name: hero-bubble-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.rating-slider [data-slot="slider-range"] {
+  background: linear-gradient(90deg, #facc15, #f59e0b);
+}
+
+.rating-slider [data-slot="slider-thumb"] {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

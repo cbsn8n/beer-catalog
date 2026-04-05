@@ -16,7 +16,7 @@ export default function Home() {
 
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [minRating, setMinRating] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(1);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
 
   useEffect(() => {
