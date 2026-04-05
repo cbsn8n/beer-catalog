@@ -89,8 +89,7 @@ export function Filters({
     <section id="beer-filters" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h2 className="mb-6 text-2xl font-bold text-gray-900">Выбери своё пиво на вечер:</h2>
       <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="relative">
+        <div className="mb-6 relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             value={searchQuery}
@@ -100,110 +99,91 @@ export function Filters({
           />
         </div>
 
-        <div className="space-y-6">
-        <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Сорта</h3>
-          <div className="flex flex-wrap gap-2">
-            {sorts.map((sort) => {
-              const active = selectedSorts.includes(sort);
-              return (
-                <Badge
-                  key={sort}
-                  variant="outline"
-                  className={`cursor-pointer select-none border transition-colors ${
-                    active
-                      ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700"
-                      : SORT_COLORS[sort] || "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"
-                  }`}
-                  onClick={() => onToggleSort(sort)}
-                >
-                  {sort}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Сорта</h3>
+              <div className="flex flex-wrap gap-2">
+                {sorts.map((sort) => {
+                  const active = selectedSorts.includes(sort);
+                  return (
+                    <Badge
+                      key={sort}
+                      variant="outline"
+                      className={`cursor-pointer select-none border transition-colors ${
+                        active
+                          ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700"
+                          : SORT_COLORS[sort] || "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"
+                      }`}
+                      onClick={() => onToggleSort(sort)}
+                    >
+                      {sort}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
 
-        <div>
-          <div className="mb-3 flex items-center gap-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Страны</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1 px-2 text-xs"
-              onClick={() => setShowAllCountries((v) => !v)}
-            >
-              {showAllCountries ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              Все
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {visibleCountries.map((country) => (
-              <Badge
-                key={country}
-                variant={selectedCountries.includes(country) ? "default" : "outline"}
-                className="cursor-pointer select-none transition-colors hover:bg-amber-100"
-                onClick={() => onToggleCountry(country)}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getFlagSrc(country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
-                  <span>{country.trim()}</span>
-                </span>
-              </Badge>
-            ))}
-          </div>
-        </div>
+            <div>
+              <div className="mb-3 flex items-center gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Страны</h3>
+                <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowAllCountries((v) => !v)}>
+                  {showAllCountries ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  Все
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {visibleCountries.map((country) => (
+                  <Badge
+                    key={country}
+                    variant={selectedCountries.includes(country) ? "default" : "outline"}
+                    className="cursor-pointer select-none transition-colors hover:bg-amber-100"
+                    onClick={() => onToggleCountry(country)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <img src={getFlagSrc(country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
+                      <span>{country}</span>
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Вкус</h3>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(TRAIT_LABELS).map(([key, label]) => {
-              const active = selectedTraits.includes(key);
-              return (
-                <Badge
-                  key={key}
-                  variant={active ? "default" : "outline"}
-                  className="cursor-pointer select-none transition-colors hover:bg-amber-100"
-                  onClick={() => onToggleTrait(key)}
-                >
-                  {label}
-                </Badge>
-              );
-            })}
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Вкус</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(TRAIT_LABELS).map(([key, label]) => {
+                  const active = selectedTraits.includes(key);
+                  return (
+                    <Badge
+                      key={key}
+                      variant={active ? "default" : "outline"}
+                      className="cursor-pointer select-none transition-colors hover:bg-amber-100"
+                      onClick={() => onToggleTrait(key)}
+                    >
+                      {label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
 
-        </div>
-        <div className="space-y-6">
-        <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Рейтинг: от {ratingRange[0]} до {ratingRange[1]}
-          </h3>
-          <Slider
-            min={1}
-            max={10}
-            step={1}
-            value={ratingRange}
-            onValueChange={(v) => onSetRatingRange(v as [number, number])}
-            className="max-w-md rating-slider"
-          />
-        </div>
+          <div className="space-y-6">
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Рейтинг: от {ratingRange[0]} до {ratingRange[1]}
+              </h3>
+              <Slider min={1} max={10} step={1} value={ratingRange} onValueChange={(v) => onSetRatingRange(v as [number, number])} className="max-w-md rating-slider" />
+            </div>
 
-        <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Цена: {priceRange[0]}₽ — {priceRange[1]}₽
-          </h3>
-          <Slider
-            min={0}
-            max={maxPrice}
-            step={10}
-            value={priceRange}
-            onValueChange={(v) => onSetPriceRange(v as [number, number])}
-            className="max-w-md"
-          />
-        </div>
-        </div>
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Цена: {priceRange[0]}₽ — {priceRange[1]}₽
+              </h3>
+              <Slider min={0} max={maxPrice} step={10} value={priceRange} onValueChange={(v) => onSetPriceRange(v as [number, number])} className="max-w-md" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
