@@ -10,7 +10,14 @@ export function Hero() {
     <section className="relative overflow-hidden bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200 py-16 sm:py-24">
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200" />
       <div className="absolute inset-0 z-10 opacity-90">
-        <FallingPattern className="h-full w-full" />
+        <FallingPattern
+          className="h-full w-full"
+          color="rgba(255,255,255,0.28)"
+          backgroundColor="rgba(255,255,255,0.04)"
+          blurIntensity="0.9em"
+          duration={120}
+          density={1}
+        />
       </div>
 
       <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">

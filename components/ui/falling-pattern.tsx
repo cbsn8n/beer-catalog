@@ -13,10 +13,10 @@ type FallingPatternProps = React.ComponentProps<'div'> & {
 };
 
 export function FallingPattern({
-  color = 'rgba(255,255,255,0.38)',
-  backgroundColor = 'transparent',
+  color = 'var(--primary)',
+  backgroundColor = 'var(--background)',
   duration = 150,
-  blurIntensity = '0.8em',
+  blurIntensity = '1em',
   density = 1,
   className,
 }: FallingPatternProps) {
@@ -57,6 +57,7 @@ export function FallingPattern({
       `radial-gradient(1.5px 1.5px at 150px 79px, ${color} 100%, transparent 150%)`,
       `radial-gradient(4px 100px at 0px 210px, ${color}, transparent)`,
       `radial-gradient(4px 100px at 300px 210px, ${color}, transparent)`,
+      `radial-gradient(1.5px 1.5px at 150px 105px, ${color} 100%, transparent 150%)`,
     ];
 
     return patterns.join(', ');
@@ -74,7 +75,7 @@ export function FallingPattern({
     '300px 215px', '300px 215px', '300px 215px',
     '300px 281px', '300px 281px', '300px 281px',
     '300px 158px', '300px 158px', '300px 158px',
-    '300px 210px', '300px 210px',
+    '300px 210px', '300px 210px', '300px 210px',
   ].join(', ');
 
   const startPositions =
