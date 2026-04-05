@@ -23,11 +23,13 @@ export function Hero() {
             Уникальный сервис подбора пива
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
-            Beer<span className="text-amber-100">vana</span>
+            <span className="block">
+              Beer<span className="text-amber-100">vana</span>
+            </span>
+            <span className="mt-3 block text-xl font-semibold tracking-normal text-orange-50 sm:text-2xl md:text-3xl">
+              база пива от Ивана
+            </span>
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-lg text-orange-50">
-            База пива от Ивана
-          </p>
           <div className="mt-10">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }} className="inline-block">
               <Button
