@@ -3,24 +3,16 @@
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-function Waves() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-80">
-      <div className="wave-bg wave-bg-1" />
-      <div className="wave-bg wave-bg-2" />
-      <div className="wave-bg wave-bg-3" />
-    </div>
-  );
-}
+import { Waves } from "@/components/ui/wave-background";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200 py-16 sm:py-24">
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200" />
-      <div className="absolute inset-0 z-10">
-        <Waves />
+      <div className="absolute inset-0 z-10 opacity-80">
+        <Waves className="h-full w-full" lineColor="rgba(255,255,255,0.28)" backgroundColor="transparent" />
       </div>
+
       <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
