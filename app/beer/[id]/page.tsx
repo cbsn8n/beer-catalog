@@ -104,7 +104,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
               {activeTraits.length > 0 && (
                 <div className="mt-8">
-                  <h2 className="mb-3 text-lg font-semibold">Характеристики</h2>
+                  <h2 className="mb-3 text-lg font-semibold">Вкус</h2>
                   <div className="flex flex-wrap gap-2">
                     {activeTraits.map(([key]) => (
                       <Badge key={key} variant="secondary">

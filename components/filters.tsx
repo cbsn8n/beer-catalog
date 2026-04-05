@@ -184,7 +184,7 @@ export function Filters({
         </div>
 
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Характеристики</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Вкус</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(TRAIT_LABELS).map(([key, label]) => {
               const active = selectedTraits.includes(key);

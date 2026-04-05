@@ -4,10 +4,20 @@ import { useMemo, useState } from "react";
 import type { BeerImage } from "@/lib/types";
 
 export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: string }) {
-  const normalized = useMemo(
-    () => images.map((img) => img.local || img.remote).filter(Boolean) as string[],
-    [images]
-  );
+  const normalized = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    for (const img of images) {
+      const src = img.remote || img.local;
+      if (!src) continue;
+      if (seen.has(src)) continue;
+      seen.add(src);
+      result.push(src);
+    }
+
+    return result;
+  }, [images]);
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
 
