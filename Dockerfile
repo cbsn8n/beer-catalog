@@ -25,6 +25,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
+ENV DATA_DIR=/app/data
+
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

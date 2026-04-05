@@ -11,7 +11,7 @@ import http from "http";
 const API_URL = process.env.NOCO_DB_API_URL!;
 const API_KEY = process.env.NOCO_DB_API_KEY!;
 const TABLE_ID = process.env.NOCO_DB_TABLE_ID!;
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const JSON_PATH = path.join(DATA_DIR, "beers.json");
 const PAGE_SIZE = 200;

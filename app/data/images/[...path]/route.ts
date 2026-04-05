@@ -3,8 +3,9 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-const IMAGES_DIR = path.join(process.cwd(), "data", "images");
-const THUMBS_DIR = path.join(process.cwd(), "data", "thumbs");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
+const IMAGES_DIR = path.join(DATA_DIR, "images");
+const THUMBS_DIR = path.join(DATA_DIR, "thumbs");
 
 export async function GET(
   req: NextRequest,

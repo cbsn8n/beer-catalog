@@ -11,7 +11,8 @@ import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import type { Beer } from "@/lib/types";
 
-const JSON_PATH = path.join(process.cwd(), "data", "beers.json");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
+const JSON_PATH = path.join(DATA_DIR, "beers.json");
 
 function getBeer(id: number): Beer | null {
   if (!fs.existsSync(JSON_PATH)) return null;

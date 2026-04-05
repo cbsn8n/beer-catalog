@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const JSON_PATH = path.join(process.cwd(), "data", "beers.json");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
+const JSON_PATH = path.join(DATA_DIR, "beers.json");
 
 export async function GET() {
   try {
