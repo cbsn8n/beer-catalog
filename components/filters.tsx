@@ -3,7 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowDownAZ, ArrowUpDown, ChevronDown, ChevronUp, Search } from "lucide-react";
 import type { Beer } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -11,14 +12,17 @@ interface FiltersProps {
   beers: Beer[];
   selectedSorts: string[];
   selectedCountries: string[];
-  minRating: number | null;
+  ratingRange: [number, number];
   priceRange: [number, number];
   maxPrice: number;
+  searchQuery: string;
+  sortBy: "name" | "price";
+  onSearchChange: (value: string) => void;
+  onSortByChange: (value: "name" | "price") => void;
   onToggleSort: (t: string) => void;
   onToggleCountry: (c: string) => void;
-  onSetMinRating: (r: number | null) => void;
+  onSetRatingRange: (range: [number, number]) => void;
   onSetPriceRange: (range: [number, number]) => void;
-  onSetAllCountries: (countries: string[]) => void;
 }
 
 const SORT_COLORS: Record<string, string> = {
@@ -34,53 +38,56 @@ const SORT_COLORS: Record<string, string> = {
 };
 
 const COUNTRY_LABELS: Record<string, string> = {
-  "Россия": "RU Россия",
-  "Германия": "DE Германия",
-  "Германия ": "DE Германия",
-  "Чехия": "CZ Чехия",
-  "Бельгия": "BE Бельгия",
-  "Литва": "LT Литва",
-  "Польша": "PL Польша",
-  "Тайланд": "TH Тайланд",
-  "Вьетнам": "VN Вьетнам",
-  "Япония": "JP Япония",
-  "Мексика": "MX Мексика",
-  "Нидерланды": "NL Нидерланды",
-  "Испания": "ES Испания",
-  "Италия": "IT Италия",
-  "Ирландия": "IE Ирландия",
-  "Франция": "FR Франция",
-  "Великобритания": "UK Великобритания",
-  "Латвия": "LV Латвия",
-  "Белоруссия": "BY Белоруссия",
-  "Китай": "CN Китай",
-  "Корея": "KR Корея",
-  "Австрия": "AT Австрия",
-  "Казахстан": "KZ Казахстан",
-  "Армения": "AM Армения",
-  "Узбекистан": "UZ Узбекистан",
-  "Бразилия": "BR Бразилия",
-  "Канада": "CA Канада",
-  "Дания": "DK Дания",
-  "Шотландия": "SC Шотландия",
-  "Эстония": "EE Эстония",
-  "Малайзия": "MY Малайзия",
-  "Тайвань": "TW Тайвань",
-  "США": "US США",
+  "Россия": "🇷🇺 Россия",
+  "Германия": "🇩🇪 Германия",
+  "Германия ": "🇩🇪 Германия",
+  "Чехия": "🇨🇿 Чехия",
+  "Бельгия": "🇧🇪 Бельгия",
+  "Литва": "🇱🇹 Литва",
+  "Польша": "🇵🇱 Польша",
+  "Тайланд": "🇹🇭 Тайланд",
+  "Вьетнам": "🇻🇳 Вьетнам",
+  "Япония": "🇯🇵 Япония",
+  "Мексика": "🇲🇽 Мексика",
+  "Нидерланды": "🇳🇱 Нидерланды",
+  "Испания": "🇪🇸 Испания",
+  "Италия": "🇮🇹 Италия",
+  "Ирландия": "🇮🇪 Ирландия",
+  "Франция": "🇫🇷 Франция",
+  "Великобритания": "🇬🇧 Великобритания",
+  "Латвия": "🇱🇻 Латвия",
+  "Белоруссия": "🇧🇾 Белоруссия",
+  "Китай": "🇨🇳 Китай",
+  "Корея": "🇰🇷 Корея",
+  "Австрия": "🇦🇹 Австрия",
+  "Казахстан": "🇰🇿 Казахстан",
+  "Армения": "🇦🇲 Армения",
+  "Узбекистан": "🇺🇿 Узбекистан",
+  "Бразилия": "🇧🇷 Бразилия",
+  "Канада": "🇨🇦 Канада",
+  "Дания": "🇩🇰 Дания",
+  "Шотландия": "🏴 Шотландия",
+  "Эстония": "🇪🇪 Эстония",
+  "Малайзия": "🇲🇾 Малайзия",
+  "Тайвань": "🇹🇼 Тайвань",
+  "США": "🇺🇸 США",
 };
 
 export function Filters({
   beers,
   selectedSorts,
   selectedCountries,
-  minRating,
+  ratingRange,
   priceRange,
   maxPrice,
+  searchQuery,
+  sortBy,
+  onSearchChange,
+  onSortByChange,
   onToggleSort,
   onToggleCountry,
-  onSetMinRating,
+  onSetRatingRange,
   onSetPriceRange,
-  onSetAllCountries,
 }: FiltersProps) {
   const [showAllCountries, setShowAllCountries] = useState(false);
 
@@ -101,13 +108,45 @@ export function Filters({
   }, [beers]);
 
   const visibleCountries = showAllCountries ? countries : countries.slice(0, 10);
-  const maxRating = 10;
-  const ratingRange: [number, number] = [minRating ?? 1, maxRating];
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h2 className="mb-6 text-2xl font-bold text-gray-900">Выбери своё пиво на вечер:</h2>
       <div className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Поиск по названию пива"
+              className="pl-10"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={sortBy === "name" ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => onSortByChange("name")}
+            >
+              <ArrowDownAZ className="h-4 w-4" />
+              По названию
+            </Button>
+            <Button
+              type="button"
+              variant={sortBy === "price" ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => onSortByChange("price")}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              По цене
+            </Button>
+          </div>
+        </div>
+
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Сорта</h3>
           <div className="flex flex-wrap gap-2">
@@ -152,29 +191,22 @@ export function Filters({
                 className="cursor-pointer select-none transition-colors hover:bg-amber-100"
                 onClick={() => onToggleCountry(country)}
               >
-                {COUNTRY_LABELS[country] || country.trim()}
+                {COUNTRY_LABELS[country] || `🏳️ ${country.trim()}`}
               </Badge>
             ))}
           </div>
-          {selectedCountries.length > 0 && (
-            <div className="mt-3">
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onSetAllCountries([])}>
-                Сбросить выбор стран
-              </Button>
-            </div>
-          )}
         </div>
 
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Рейтинг: от {ratingRange[0]}
+            Рейтинг: от {ratingRange[0]} до {ratingRange[1]}
           </h3>
           <Slider
             min={1}
             max={10}
             step={1}
             value={ratingRange}
-            onValueChange={(v) => onSetMinRating((v as [number, number])[0] || null)}
+            onValueChange={(v) => onSetRatingRange(v as [number, number])}
             className="max-w-md rating-slider"
           />
         </div>
