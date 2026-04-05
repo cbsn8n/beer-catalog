@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Beer {
+  id         Int      @id @default(autoincrement())
+  sourceId    Int?     @unique
+  name       String
+  image      String?
+  imageRemote String?
+  type       String?
+  sort       String?
+  filtration String?
+  country    String?
+  price      Decimal? @db.Decimal(10, 2)
+  rating     Float?
+  comment    String?
+  socks      Boolean  @default(false)
+  bitter     Boolean  @default(false)
+  sour       Boolean  @default(false)
+  fruity     Boolean  @default(false)
+  smoked     Boolean  @default(false)
+  watery     Boolean  @default(false)
+  spirity    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model User {
+  id          String   @id @default(cuid())
+  telegramId  String?  @unique
+  googleId    String?  @unique
+  name        String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, MapPin, Star, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BeerDetailImage } from "@/components/beer-detail-image";
 import type { Beer } from "@/lib/types";
 
 const JSON_PATH = path.join(process.cwd(), "data", "beers.json");
@@ -31,6 +32,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
   if (!beer) notFound();
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
+  const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
@@ -43,16 +45,11 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
         </Link>
 
         <div className="grid gap-8 md:grid-cols-[420px_1fr]">
-          <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+          <div>
             {beer.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`${beer.image}?w=900&q=78`}
-                alt={beer.name}
-                className="h-auto w-full object-contain"
-              />
+              <BeerDetailImage src={`${beer.image}?w=1000&q=80`} alt={beer.name} />
             ) : (
-              <div className="flex aspect-square items-center justify-center bg-amber-50 text-amber-300">
+              <div className="flex aspect-square items-center justify-center rounded-3xl border bg-amber-50 text-amber-300 shadow-sm">
                 No image
               </div>
             )}
@@ -76,18 +73,27 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                   {beer.country}
                 </div>
               )}
-              {beer.rating != null && (
-                <div className="flex items-center gap-2 text-amber-600">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  {beer.rating}/10
-                </div>
-              )}
               {beer.price != null && (
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4" />
                   {beer.price} ₽
                 </div>
               )}
+            </div>
+
+            <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
+              <div className="mb-2 text-sm font-medium uppercase tracking-wide text-gray-500">Оценка</div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 text-amber-500">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-5 w-5 ${i < rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                    />
+                  ))}
+                </div>
+                <div className="font-semibold text-amber-700">{beer.rating ?? "—"}/10</div>
+              </div>
             </div>
 
             {activeTraits.length > 0 && (
