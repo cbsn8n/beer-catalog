@@ -125,18 +125,27 @@ async function main() {
   for (const rec of allRecords) {
     let imagePath: string | null = null;
     let imageRemote: string | null = null;
+    const images: { local: string | null; remote: string | null }[] = [];
 
     if (rec.Фото && rec.Фото.length > 0) {
-      const photo = rec.Фото[0];
-      const ext = photo.mimetype?.includes("png") ? "png" : "jpg";
-      const localName = `${rec.Id}.${ext}`;
-      const localDest = path.join(IMAGES_DIR, localName);
-      imagePath = `/data/images/${localName}`;
-      imageRemote = `${API_URL}/${photo.signedPath}`;
+      rec.Фото.forEach((photo, idx) => {
+        const ext = photo.mimetype?.includes("png") ? "png" : "jpg";
+        const localName = idx === 0 ? `${rec.Id}.${ext}` : `${rec.Id}-${idx + 1}.${ext}`;
+        const localDest = path.join(IMAGES_DIR, localName);
+        const localUrl = `/data/images/${localName}`;
+        const remoteUrl = `${API_URL}/${photo.signedPath}`;
 
-      if (!SKIP_IMAGES) {
-        imageTasks.push({ url: imageRemote, dest: localDest });
-      }
+        images.push({ local: localUrl, remote: remoteUrl });
+
+        if (idx === 0) {
+          imagePath = localUrl;
+          imageRemote = remoteUrl;
+        }
+
+        if (!SKIP_IMAGES) {
+          imageTasks.push({ url: remoteUrl, dest: localDest });
+        }
+      });
     }
 
     beers.push({
@@ -144,6 +153,7 @@ async function main() {
       name: rec.Название || "Без названия",
       image: imagePath,
       imageRemote,
+      images,
       type: rec.Тип || null,
       sort: rec.Сорт || null,
       filtration: rec.Фильтрация || null,

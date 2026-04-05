@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { BeerDetailImage } from "@/components/beer-detail-image";
+import { BeerImageGallery } from "@/components/beer-image-gallery";
 import type { Beer } from "@/lib/types";
 
 const JSON_PATH = path.join(process.cwd(), "data", "beers.json");
@@ -35,6 +35,14 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
+  const images = beer.images?.length
+    ? beer.images.map((img) => ({
+        local: img.local ? `${img.local}?w=1000&q=80` : null,
+        remote: img.remote,
+      }))
+    : beer.image || beer.imageRemote
+      ? [{ local: beer.image ? `${beer.image}?w=1000&q=80` : null, remote: beer.imageRemote ?? null }]
+      : [];
 
   return (
     <>
@@ -50,13 +58,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
-              {beer.image || beer.imageRemote ? (
-                <BeerDetailImage src={beer.image ? `${beer.image}?w=1000&q=80` : (beer.imageRemote as string)} alt={beer.name} />
-              ) : (
-                <div className="flex aspect-square items-center justify-center rounded-3xl border bg-amber-50 text-amber-300 shadow-sm">
-                  No image
-                </div>
-              )}
+              <BeerImageGallery images={images} alt={beer.name} />
             </div>
 
             <div>
