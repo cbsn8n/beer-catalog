@@ -26,10 +26,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 ENV DATA_DIR=/app/data
 
-# Ensure image/thumb dirs exist and are writable when volumes mount over them
-RUN mkdir -p /app/data/images /app/data/thumbs \
-    && chown -R nextjs:nodejs /app/data
+RUN apk add --no-cache su-exec \
+    && printf '#!/bin/sh\nchown -R nextjs:nodejs /app/data 2>/dev/null || true\nexec su-exec nextjs node server.js\n' > /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
 
-USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["/app/entrypoint.sh"]
