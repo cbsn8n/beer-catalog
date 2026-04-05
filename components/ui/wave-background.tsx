@@ -69,11 +69,11 @@ export function Waves({
     })
     pathsRef.current = []
 
-    const xGap = 9
-    const yGap = 9
+    const xGap = 10
+    const yGap = 10
 
-    const oWidth = width + 220
-    const oHeight = height + 34
+    const oWidth = width + 260
+    const oHeight = height + 40
 
     const totalLines = Math.ceil(oWidth / xGap)
     const totalPoints = Math.ceil(oHeight / yGap)
@@ -153,22 +153,22 @@ export function Waves({
 
     lines.forEach((points) => {
       points.forEach((p: Point) => {
-        const move = noise((p.x + time * 0.008) * 0.0028, (p.y + time * 0.003) * 0.002) * 8.5
+        const move = noise((p.x + time * 0.008) * 0.0024, (p.y + time * 0.003) * 0.0018) * 9.2
 
-        p.wave.x = Math.cos(move) * 14
-        p.wave.y = Math.sin(move) * 7
+        p.wave.x = Math.cos(move) * 17
+        p.wave.y = Math.sin(move) * 8.5
 
         const dx = p.x - mouse.sx
         const dy = p.y - mouse.sy
         const d = Math.hypot(dx, dy)
-        const l = Math.max(185, mouse.vs)
+        const l = Math.max(215, mouse.vs)
 
         if (d < l) {
           const s = 1 - d / l
           const f = Math.cos(d * 0.001) * s
 
-          p.cursor.vx += Math.cos(mouse.a) * f * l * mouse.vs * 0.00036
-          p.cursor.vy += Math.sin(mouse.a) * f * l * mouse.vs * 0.00036
+          p.cursor.vx += Math.cos(mouse.a) * f * l * mouse.vs * 0.00042
+          p.cursor.vy += Math.sin(mouse.a) * f * l * mouse.vs * 0.00042
         }
 
         p.cursor.vx += (0 - p.cursor.x) * 0.01
@@ -180,8 +180,8 @@ export function Waves({
         p.cursor.x += p.cursor.vx
         p.cursor.y += p.cursor.vy
 
-        p.cursor.x = Math.min(46, Math.max(-46, p.cursor.x))
-        p.cursor.y = Math.min(46, Math.max(-46, p.cursor.y))
+        p.cursor.x = Math.min(58, Math.max(-58, p.cursor.x))
+        p.cursor.y = Math.min(58, Math.max(-58, p.cursor.y))
       })
     })
   }

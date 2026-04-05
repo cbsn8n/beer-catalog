@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { getFlag } from "@/lib/country-flags";
+import { getCountryCode, getFlag } from "@/lib/country-flags";
 import type { Beer } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -146,8 +146,12 @@ export function Filters({
                   <span
                     className="text-sm leading-none"
                     style={{ fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif' }}
+                    aria-hidden="true"
                   >
                     {getFlag(country)}
+                  </span>
+                  <span className="rounded border border-current/15 bg-white/60 px-1 py-0 text-[10px] font-bold leading-none text-gray-600">
+                    {getCountryCode(country)}
                   </span>
                   <span>{country.trim()}</span>
                 </span>
