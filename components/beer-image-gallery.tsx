@@ -42,7 +42,7 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
         className="group block w-full overflow-hidden rounded-3xl border bg-white shadow-sm"
         onClick={() => setOpen(true)}
       >
-        <div className="relative aspect-square overflow-hidden bg-stone-50">
+        <div className="relative aspect-square overflow-hidden bg-white">
           <div className="flex h-full w-full items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -63,7 +63,7 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
               onClick={() => setActive(idx)}
               className={`overflow-hidden rounded-2xl border bg-white ${idx === active ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
             >
-              <div className="aspect-square overflow-hidden bg-stone-50">
+              <div className="aspect-square overflow-hidden bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.thumb} alt={`${alt} ${idx + 1}`} className="h-full w-full object-cover" />
               </div>

@@ -19,7 +19,7 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
       <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
         <div className="relative aspect-square overflow-hidden bg-stone-100">
           {beer.image ? (
-            <div className="flex h-full w-full items-center justify-center overflow-hidden bg-stone-50">
+            <div className="flex h-full w-full items-center justify-center overflow-hidden bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`${beer.image}?w=420&q=62`}
