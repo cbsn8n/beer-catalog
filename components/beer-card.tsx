@@ -15,15 +15,14 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
     >
       <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
         <div className="relative aspect-square overflow-hidden bg-stone-100">
-          {(beer.image || (beer as Beer & { imageRemote?: string | null }).imageRemote) ? (
+          {beer.image ? (
             <div className="flex h-full w-full items-center justify-center overflow-hidden bg-stone-50">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={(beer as Beer & { imageRemote?: string | null }).imageRemote || `${beer.image}?w=600&q=72`}
+                src={`${beer.image}?w=420&q=62`}
                 alt={beer.name}
                 className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
-                referrerPolicy="no-referrer"
               />
             </div>
           ) : (
