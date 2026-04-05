@@ -1,8 +1,6 @@
 /**
  * NocoDB → local JSON + images sync script.
  * Run: npx tsx scripts/sync.ts
- *
- * Env: NOCO_DB_API_URL, NOCO_DB_API_KEY, NOCO_DB_TABLE_ID
  */
 
 import fs from "fs";
@@ -43,28 +41,6 @@ interface NocoBeer {
   Спиртовое: boolean | number | string;
   Оценка: number | null;
   Комментарий: string | null;
-}
-
-export interface Beer {
-  id: number;
-  name: string;
-  image: string | null;
-  type: string | null;
-  sort: string | null;
-  filtration: string | null;
-  country: string | null;
-  price: number | null;
-  traits: {
-    socks: boolean;
-    bitter: boolean;
-    sour: boolean;
-    fruity: boolean;
-    smoked: boolean;
-    watery: boolean;
-    spirity: boolean;
-  };
-  rating: number | null;
-  comment: string | null;
 }
 
 async function fetchPage(offset: number): Promise<{ list: NocoBeer[]; totalRows: number }> {
@@ -110,7 +86,6 @@ function toBool(v: unknown): boolean {
 
 async function downloadBatch(tasks: Array<{ url: string; dest: string }>) {
   let downloaded = 0, skipped = 0, failed = 0;
-  // Process in batches
   for (let i = 0; i < tasks.length; i += CONCURRENT_DL) {
     const batch = tasks.slice(i, i + CONCURRENT_DL);
     const results = await Promise.allSettled(
@@ -120,9 +95,7 @@ async function downloadBatch(tasks: Array<{ url: string; dest: string }>) {
         downloaded++;
       })
     );
-    for (const r of results) {
-      if (r.status === "rejected") failed++;
-    }
+    for (const r of results) if (r.status === "rejected") failed++;
     if ((i + CONCURRENT_DL) % 100 === 0 || i + CONCURRENT_DL >= tasks.length) {
       console.log(`   Images: ${i + batch.length}/${tasks.length} (dl: ${downloaded}, cached: ${skipped}, err: ${failed})`);
     }
@@ -132,10 +105,8 @@ async function downloadBatch(tasks: Array<{ url: string; dest: string }>) {
 
 async function main() {
   console.log("🍺 Syncing beers from NocoDB...");
-
   fs.mkdirSync(IMAGES_DIR, { recursive: true });
 
-  // Fetch all records
   const allRecords: NocoBeer[] = [];
   let offset = 0;
   let totalRows = 0;
@@ -148,12 +119,12 @@ async function main() {
     offset += PAGE_SIZE;
   } while (allRecords.length < totalRows);
 
-  // Build beer list and image download tasks
-  const beers: Beer[] = [];
+  const beers = [] as any[];
   const imageTasks: Array<{ url: string; dest: string }> = [];
 
   for (const rec of allRecords) {
     let imagePath: string | null = null;
+    let imageRemote: string | null = null;
 
     if (rec.Фото && rec.Фото.length > 0) {
       const photo = rec.Фото[0];
@@ -161,17 +132,10 @@ async function main() {
       const localName = `${rec.Id}.${ext}`;
       const localDest = path.join(IMAGES_DIR, localName);
       imagePath = `/data/images/${localName}`;
+      imageRemote = `${API_URL}/${photo.signedPath}`;
 
       if (!SKIP_IMAGES) {
-        imageTasks.push({
-          url: `${API_URL}/${photo.signedPath}`,
-          dest: localDest,
-        });
-      }
-
-      // Check if already exists
-      if (fs.existsSync(localDest)) {
-        imagePath = `/data/images/${localName}`;
+        imageTasks.push({ url: imageRemote, dest: localDest });
       }
     }
 
@@ -179,6 +143,7 @@ async function main() {
       id: rec.Id,
       name: rec.Название || "Без названия",
       image: imagePath,
+      imageRemote,
       type: rec.Тип || null,
       sort: rec.Сорт || null,
       filtration: rec.Фильтрация || null,
@@ -198,11 +163,9 @@ async function main() {
     });
   }
 
-  // Save JSON first (before images, so site works even if images take long)
   fs.writeFileSync(JSON_PATH, JSON.stringify(beers, null, 2));
   console.log(`\n📦 JSON saved: ${beers.length} beers → ${JSON_PATH}`);
 
-  // Download images
   if (!SKIP_IMAGES && imageTasks.length > 0) {
     console.log(`\n🖼  Downloading ${imageTasks.length} images...`);
     const { downloaded, skipped, failed } = await downloadBatch(imageTasks);
