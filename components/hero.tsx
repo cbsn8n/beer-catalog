@@ -34,10 +34,10 @@ export function Hero() {
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }} className="inline-block">
               <Button
                 size="lg"
-                className="group relative min-h-16 overflow-hidden rounded-full border border-amber-300/50 bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 px-10 py-7 text-lg font-bold text-white shadow-[0_10px_30px_rgba(245,158,11,0.35)] transition-all duration-300 hover:shadow-[0_16px_40px_rgba(245,158,11,0.5)]"
+                className="group relative min-h-16 overflow-hidden rounded-full border border-white/70 bg-white/95 px-10 py-7 text-lg font-bold text-amber-700 shadow-[0_10px_30px_rgba(255,255,255,0.25)] transition-all duration-300 hover:bg-white hover:shadow-[0_16px_40px_rgba(255,255,255,0.35)]"
               >
-                <span className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <Plus className="relative z-10 mr-3 h-8 w-8 stroke-[3] transition-transform duration-300 group-hover:rotate-90 group-hover:scale-125" />
+                <span className="absolute inset-0 bg-gradient-to-r from-white/60 to-amber-50/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <Plus className="relative z-10 mr-3 h-8 w-8 stroke-[3] text-amber-600 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-125" />
                 <span className="relative z-10">Добавить пиво в базу</span>
               </Button>
             </motion.div>
