@@ -49,6 +49,10 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
               src={current.main}
               alt={alt}
               className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                const fallback = images[active]?.remote;
+                if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+              }}
             />
           </div>
         </div>
@@ -65,7 +69,15 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
             >
               <div className="aspect-square overflow-hidden bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.thumb} alt={`${alt} ${idx + 1}`} className="h-full w-full object-cover" />
+                <img
+                  src={item.thumb}
+                  alt={`${alt} ${idx + 1}`}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const fallback = images[idx]?.remote;
+                    if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                  }}
+                />
               </div>
             </button>
           ))}
@@ -96,7 +108,15 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
               </>
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current.main} alt={alt} className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+            <img
+              src={current.main}
+              alt={alt}
+              className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+              onError={(e) => {
+                const fallback = images[active]?.remote;
+                if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+              }}
+            />
           </div>
         </div>
       )}

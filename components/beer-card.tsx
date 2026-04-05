@@ -26,6 +26,10 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
                 alt={beer.name}
                 className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
+                onError={(e) => {
+                  const remote = beer.imageRemote;
+                  if (remote && e.currentTarget.src !== remote) e.currentTarget.src = remote;
+                }}
               />
             </div>
           ) : (
