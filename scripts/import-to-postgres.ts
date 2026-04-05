@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { PrismaClient } from "@prisma/client";
 import type { Beer } from "@/lib/types";
 
-const prisma = new PrismaClient();
+let prisma: any;
 const JSON_PATH = path.join(process.cwd(), "data", "beers.json");
 
 async function main() {
+  const mod = await import("@prisma/client");
+  prisma = new mod.PrismaClient();
+
   if (!fs.existsSync(JSON_PATH)) throw new Error("data/beers.json not found");
   const beers = JSON.parse(fs.readFileSync(JSON_PATH, "utf-8")) as Beer[];
 
@@ -66,5 +68,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
   });
