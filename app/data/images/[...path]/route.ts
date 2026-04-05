@@ -70,7 +70,7 @@ export async function GET(
   }
 
   fs.mkdirSync(THUMBS_DIR, { recursive: true });
-  const thumbName = `${path.parse(fileName).name}_${size}q${quality}.webp`;
+  const thumbName = `${path.parse(fileName).name}_v2_${size}q${quality}.webp`;
   const thumbPath = path.join(THUMBS_DIR, thumbName);
 
   if (!fs.existsSync(thumbPath)) {
