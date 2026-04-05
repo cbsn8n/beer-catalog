@@ -160,10 +160,25 @@ export function Waves({
   }, [drawLines, movePoints]);
 
   React.useEffect(() => {
-    createLines();
-    rafRef.current = requestAnimationFrame(tick);
+    const start = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        mouseRef.current.x = rect.width / 2;
+        mouseRef.current.y = rect.height / 2;
+        mouseRef.current.sx = rect.width / 2;
+        mouseRef.current.sy = rect.height / 2;
+      }
+      createLines();
+      drawLines();
+      rafRef.current = requestAnimationFrame(tick);
+    };
 
-    const onResize = () => createLines();
+    const t = window.setTimeout(start, 50);
+
+    const onResize = () => {
+      createLines();
+      drawLines();
+    };
     const onPointerMove = (e: PointerEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -175,11 +190,12 @@ export function Waves({
     window.addEventListener("pointermove", onPointerMove);
 
     return () => {
+      window.clearTimeout(t);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onPointerMove);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [createLines, tick]);
+  }, [createLines, drawLines, tick]);
 
   return (
     <div
