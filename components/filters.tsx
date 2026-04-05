@@ -143,16 +143,8 @@ export function Filters({
                 onClick={() => onToggleCountry(country)}
               >
                 <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="text-base leading-none"
-                    style={{
-                      fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
-                      fontVariantEmoji: 'emoji',
-                    }}
-                    aria-hidden="true"
-                  >
-                    {getFlag(country)}
-                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={getFlag(country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
                   <span>{country.trim()}</span>
                 </span>
               </Badge>

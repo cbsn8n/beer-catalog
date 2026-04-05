@@ -1,40 +1,4 @@
-const FLAGS: Record<string, string> = {
-  "Россия": "🇷🇺",
-  "Германия": "🇩🇪",
-  "Германия ": "🇩🇪",
-  "Чехия": "🇨🇿",
-  "Бельгия": "🇧🇪",
-  "Литва": "🇱🇹",
-  "Польша": "🇵🇱",
-  "Тайланд": "🇹🇭",
-  "Вьетнам": "🇻🇳",
-  "Япония": "🇯🇵",
-  "Мексика": "🇲🇽",
-  "Нидерланды": "🇳🇱",
-  "Испания": "🇪🇸",
-  "Италия": "🇮🇹",
-  "Ирландия": "🇮🇪",
-  "Франция": "🇫🇷",
-  "Великобритания": "🇬🇧",
-  "Латвия": "🇱🇻",
-  "Белоруссия": "🇧🇾",
-  "Китай": "🇨🇳",
-  "Корея": "🇰🇷",
-  "Австрия": "🇦🇹",
-  "Казахстан": "🇰🇿",
-  "Армения": "🇦🇲",
-  "Узбекистан": "🇺🇿",
-  "Бразилия": "🇧🇷",
-  "Канада": "🇨🇦",
-  "Дания": "🇩🇰",
-  "Шотландия": "🏴",
-  "Эстония": "🇪🇪",
-  "Малайзия": "🇲🇾",
-  "Тайвань": "🇹🇼",
-  "США": "🇺🇸",
-};
-
-const CODES: Record<string, string> = {
+const FLAG_CODES: Record<string, string> = {
   "Россия": "RU",
   "Германия": "DE",
   "Германия ": "DE",
@@ -63,7 +27,7 @@ const CODES: Record<string, string> = {
   "Бразилия": "BR",
   "Канада": "CA",
   "Дания": "DK",
-  "Шотландия": "SC",
+  "Шотландия": "GB",
   "Эстония": "EE",
   "Малайзия": "MY",
   "Тайвань": "TW",
@@ -71,9 +35,6 @@ const CODES: Record<string, string> = {
 };
 
 export function getFlag(country: string): string {
-  return FLAGS[country] || FLAGS[country.trim()] || "🍺";
-}
-
-export function getCountryCode(country: string): string {
-  return CODES[country] || CODES[country.trim()] || "??";
+  const code = FLAG_CODES[country] || FLAG_CODES[country.trim()];
+  return code ? `/flags/${code}.svg` : "/flags/GB.svg";
 }

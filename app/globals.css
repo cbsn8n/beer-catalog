@@ -117,45 +117,24 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@keyframes waveDrift {
+@keyframes fallingPattern {
   0% {
-    transform: translateX(0) translateY(0) scaleX(1.1);
+    transform: translate3d(0, -20%, 0) rotate(0deg);
+    opacity: 0;
   }
-  50% {
-    transform: translateX(-8%) translateY(2%) scaleX(1.18);
+  10% {
+    opacity: 0.85;
   }
   100% {
-    transform: translateX(0) translateY(0) scaleX(1.1);
+    transform: translate3d(24px, 120vh, 0) rotate(16deg);
+    opacity: 0;
   }
 }
 
-.wave-bg {
-  position: absolute;
-  left: -10%;
-  width: 120%;
-  height: 38%;
-  border-radius: 100% 100% 0 0;
-  opacity: 0.28;
-  filter: blur(10px);
-  animation: waveDrift ease-in-out infinite;
-}
-
-.wave-bg-1 {
-  bottom: -4%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,244,214,0.12) 100%);
-  animation-duration: 10s;
-}
-
-.wave-bg-2 {
-  bottom: 8%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(255,235,180,0.1) 100%);
-  animation-duration: 14s;
-}
-
-.wave-bg-3 {
-  bottom: 20%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,228,145,0.08) 100%);
-  animation-duration: 18s;
+.falling-pattern-item {
+  animation-name: fallingPattern;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 .rating-slider [data-slot="slider-range"] {
