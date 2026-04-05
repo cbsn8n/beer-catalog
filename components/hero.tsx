@@ -37,8 +37,10 @@ function Waves() {
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-amber-50 to-white py-16 sm:py-24">
-      <Waves />
-      <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6">
+      <div className="absolute inset-0 z-10 opacity-80">
+        <Waves />
+      </div>
+      <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -62,7 +64,9 @@ export function Hero() {
               >
                 <Bubbles />
                 <span className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <Plus className="relative z-10 mr-2 h-6 w-6 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-125" />
+                <span className="relative z-10 mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30">
+                  <Plus className="h-7 w-7 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-125" />
+                </span>
                 <span className="relative z-10">Добавить пиво в базу</span>
               </Button>
             </motion.div>

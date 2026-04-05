@@ -9,9 +9,10 @@ const PAGE_SIZE = 30;
 
 interface BeerGridProps {
   beers: Beer[];
+  sortControls?: React.ReactNode;
 }
 
-export function BeerGrid({ beers }: BeerGridProps) {
+export function BeerGrid({ beers, sortControls }: BeerGridProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +52,10 @@ export function BeerGrid({ beers }: BeerGridProps) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
-      <p className="mb-4 text-sm text-gray-500">
-        Найдено: {beers.length}
-      </p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-500">Найдено: {beers.length}</p>
+        {sortControls}
+      </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visible.map((beer, i) => (
           <BeerCard key={beer.id} beer={beer} index={i} />

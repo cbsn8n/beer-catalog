@@ -19,9 +19,9 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
             <div className="flex h-full w-full items-center justify-center overflow-hidden bg-stone-50">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`${beer.image}?w=400&q=70`}
+                src={`${beer.image}?w=600&q=72`}
                 alt={beer.name}
-                className="h-full w-auto min-w-full max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
+                className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
               />
             </div>

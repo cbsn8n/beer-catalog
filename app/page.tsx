@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { ArrowDownAZ, ArrowUpDown, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { Filters } from "@/components/filters";
@@ -104,7 +105,33 @@ export default function Home() {
               onSetRatingRange={setRatingRange}
               onSetPriceRange={setPriceRange}
             />
-            <BeerGrid beers={filtered} />
+            <BeerGrid
+              beers={filtered}
+              sortControls={(
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={sortBy === "name" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setSortBy("name")}
+                  >
+                    <ArrowDownAZ className="h-4 w-4" />
+                    По названию
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={sortBy === "price" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setSortBy("price")}
+                  >
+                    <ArrowUpDown className="h-4 w-4" />
+                    По цене
+                  </Button>
+                </div>
+              )}
+            />
           </>
         )}
       </main>

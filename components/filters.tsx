@@ -123,28 +123,7 @@ export function Filters({
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant={sortBy === "name" ? "default" : "outline"}
-              size="sm"
-              className="gap-2"
-              onClick={() => onSortByChange("name")}
-            >
-              <ArrowDownAZ className="h-4 w-4" />
-              По названию
-            </Button>
-            <Button
-              type="button"
-              variant={sortBy === "price" ? "default" : "outline"}
-              size="sm"
-              className="gap-2"
-              onClick={() => onSortByChange("price")}
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              По цене
-            </Button>
-          </div>
+          <div className="hidden" />
         </div>
 
         <div>
