@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { getFlag } from "@/lib/country-flags";
+import { getFlagSrc } from "@/lib/country-meta";
 import type { Beer } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -77,7 +77,8 @@ export function Filters({
   const countries = useMemo(() => {
     const map = new Map<string, number>();
     beers.forEach((b) => {
-      if (b.country) map.set(b.country, (map.get(b.country) || 0) + 1);
+      const c = b.country?.trim();
+      if (c) map.set(c, (map.get(c) || 0) + 1);
     });
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).map(([c]) => c);
   }, [beers]);
@@ -85,9 +86,10 @@ export function Filters({
   const visibleCountries = showAllCountries ? countries : countries.slice(0, 10);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <section id="beer-filters" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h2 className="mb-6 text-2xl font-bold text-gray-900">Выбери своё пиво на вечер:</h2>
-      <div className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -98,6 +100,7 @@ export function Filters({
           />
         </div>
 
+        <div className="space-y-6">
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Сорта</h3>
           <div className="flex flex-wrap gap-2">
@@ -144,7 +147,7 @@ export function Filters({
               >
                 <span className="inline-flex items-center gap-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getFlag(country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
+                  <img src={getFlagSrc(country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
                   <span>{country.trim()}</span>
                 </span>
               </Badge>
@@ -171,6 +174,8 @@ export function Filters({
           </div>
         </div>
 
+        </div>
+        <div className="space-y-6">
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
             Рейтинг: от {ratingRange[0]} до {ratingRange[1]}
@@ -197,6 +202,8 @@ export function Filters({
             onValueChange={(v) => onSetPriceRange(v as [number, number])}
             className="max-w-md"
           />
+        </div>
+        </div>
         </div>
       </div>
     </section>

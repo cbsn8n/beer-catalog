@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MapPin, Star, Tag } from "lucide-react";
+import { ArrowLeft, Star, Tag } from "lucide-react";
+import { getFlagSrc } from "@/lib/country-meta";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
@@ -75,7 +76,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
               <div className="mt-4 flex flex-wrap items-center gap-4 text-gray-600">
                 {beer.country && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
+                    <img src={getFlagSrc(beer.country)} alt="" className="h-4 w-6 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
                     {beer.country}
                   </div>
                 )}

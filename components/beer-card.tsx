@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { MapPin, Star, Beer as BeerIcon } from "lucide-react";
+import { Star, Beer as BeerIcon } from "lucide-react";
+import { getFlagSrc } from "@/lib/country-meta";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Beer } from "@/lib/types";
@@ -42,8 +43,8 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
           <h3 className="line-clamp-1 font-semibold text-gray-900">{beer.name}</h3>
           <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
             {beer.country && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
+              <span className="flex items-center gap-1.5">
+                <img src={getFlagSrc(beer.country)} alt="" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" aria-hidden="true" />
                 {beer.country}
               </span>
             )}
