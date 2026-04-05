@@ -42,49 +42,53 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const { path: segments } = await params;
-  const fileName = segments.join("/");
+  try {
+    const { path: segments } = await params;
+    const fileName = segments.join("/");
 
-  if (fileName.includes("..")) {
-    return new NextResponse("Forbidden", { status: 403 });
-  }
+    if (fileName.includes("..")) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
 
-  const w = req.nextUrl.searchParams.get("w");
-  const q = req.nextUrl.searchParams.get("q");
-  const size = w ? Math.min(parseInt(w), 800) : null;
-  const quality = q ? Math.min(parseInt(q), 90) : 72;
+    const w = req.nextUrl.searchParams.get("w");
+    const q = req.nextUrl.searchParams.get("q");
+    const size = w ? Math.min(parseInt(w), 1200) : null;
+    const quality = q ? Math.min(parseInt(q), 90) : 72;
 
-  const filePath = await ensureLocalImage(fileName);
-  if (!filePath) return new NextResponse("Not found", { status: 404 });
+    const filePath = await ensureLocalImage(fileName);
+    if (!filePath) return new NextResponse("Not found", { status: 404 });
 
-  if (!size) {
-    const ext = path.extname(filePath).toLowerCase();
-    const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
-    const buffer = fs.readFileSync(filePath);
-    return new NextResponse(buffer, {
+    if (!size) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+      const buffer = fs.readFileSync(filePath);
+      return new NextResponse(buffer, {
+        headers: {
+          "Content-Type": mime,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    fs.mkdirSync(THUMBS_DIR, { recursive: true });
+    const thumbName = `${path.parse(fileName).name}_v3_${size}q${quality}.webp`;
+    const thumbPath = path.join(THUMBS_DIR, thumbName);
+
+    if (!fs.existsSync(thumbPath)) {
+      await sharp(filePath)
+        .resize({ height: size, fit: "inside", withoutEnlargement: true })
+        .webp({ quality })
+        .toFile(thumbPath);
+    }
+
+    const thumb = fs.readFileSync(thumbPath);
+    return new NextResponse(thumb, {
       headers: {
-        "Content-Type": mime,
+        "Content-Type": "image/webp",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
+  } catch (error) {
+    return new NextResponse("Image error", { status: 500 });
   }
-
-  fs.mkdirSync(THUMBS_DIR, { recursive: true });
-  const thumbName = `${path.parse(fileName).name}_v2_${size}q${quality}.webp`;
-  const thumbPath = path.join(THUMBS_DIR, thumbName);
-
-  if (!fs.existsSync(thumbPath)) {
-    await sharp(filePath)
-      .resize({ height: size, fit: "inside", withoutEnlargement: true })
-      .webp({ quality })
-      .toFile(thumbPath);
-  }
-
-  const thumb = fs.readFileSync(thumbPath);
-  return new NextResponse(thumb, {
-    headers: {
-      "Content-Type": "image/webp",
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  });
 }
