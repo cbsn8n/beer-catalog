@@ -37,40 +37,40 @@ const SORT_COLORS: Record<string, string> = {
   "Фруктовое": "border-pink-200 bg-pink-50 text-pink-800 hover:bg-pink-100",
 };
 
-const COUNTRY_LABELS: Record<string, string> = {
-  "Россия": "🇷🇺 Россия",
-  "Германия": "🇩🇪 Германия",
-  "Германия ": "🇩🇪 Германия",
-  "Чехия": "🇨🇿 Чехия",
-  "Бельгия": "🇧🇪 Бельгия",
-  "Литва": "🇱🇹 Литва",
-  "Польша": "🇵🇱 Польша",
-  "Тайланд": "🇹🇭 Тайланд",
-  "Вьетнам": "🇻🇳 Вьетнам",
-  "Япония": "🇯🇵 Япония",
-  "Мексика": "🇲🇽 Мексика",
-  "Нидерланды": "🇳🇱 Нидерланды",
-  "Испания": "🇪🇸 Испания",
-  "Италия": "🇮🇹 Италия",
-  "Ирландия": "🇮🇪 Ирландия",
-  "Франция": "🇫🇷 Франция",
-  "Великобритания": "🇬🇧 Великобритания",
-  "Латвия": "🇱🇻 Латвия",
-  "Белоруссия": "🇧🇾 Белоруссия",
-  "Китай": "🇨🇳 Китай",
-  "Корея": "🇰🇷 Корея",
-  "Австрия": "🇦🇹 Австрия",
-  "Казахстан": "🇰🇿 Казахстан",
-  "Армения": "🇦🇲 Армения",
-  "Узбекистан": "🇺🇿 Узбекистан",
-  "Бразилия": "🇧🇷 Бразилия",
-  "Канада": "🇨🇦 Канада",
-  "Дания": "🇩🇰 Дания",
-  "Шотландия": "🏴 Шотландия",
-  "Эстония": "🇪🇪 Эстония",
-  "Малайзия": "🇲🇾 Малайзия",
-  "Тайвань": "🇹🇼 Тайвань",
-  "США": "🇺🇸 США",
+const COUNTRY_META: Record<string, { code: string; label: string }> = {
+  "Россия": { code: "RU", label: "Россия" },
+  "Германия": { code: "DE", label: "Германия" },
+  "Германия ": { code: "DE", label: "Германия" },
+  "Чехия": { code: "CZ", label: "Чехия" },
+  "Бельгия": { code: "BE", label: "Бельгия" },
+  "Литва": { code: "LT", label: "Литва" },
+  "Польша": { code: "PL", label: "Польша" },
+  "Тайланд": { code: "TH", label: "Тайланд" },
+  "Вьетнам": { code: "VN", label: "Вьетнам" },
+  "Япония": { code: "JP", label: "Япония" },
+  "Мексика": { code: "MX", label: "Мексика" },
+  "Нидерланды": { code: "NL", label: "Нидерланды" },
+  "Испания": { code: "ES", label: "Испания" },
+  "Италия": { code: "IT", label: "Италия" },
+  "Ирландия": { code: "IE", label: "Ирландия" },
+  "Франция": { code: "FR", label: "Франция" },
+  "Великобритания": { code: "UK", label: "Великобритания" },
+  "Латвия": { code: "LV", label: "Латвия" },
+  "Белоруссия": { code: "BY", label: "Белоруссия" },
+  "Китай": { code: "CN", label: "Китай" },
+  "Корея": { code: "KR", label: "Корея" },
+  "Австрия": { code: "AT", label: "Австрия" },
+  "Казахстан": { code: "KZ", label: "Казахстан" },
+  "Армения": { code: "AM", label: "Армения" },
+  "Узбекистан": { code: "UZ", label: "Узбекистан" },
+  "Бразилия": { code: "BR", label: "Бразилия" },
+  "Канада": { code: "CA", label: "Канада" },
+  "Дания": { code: "DK", label: "Дания" },
+  "Шотландия": { code: "SC", label: "Шотландия" },
+  "Эстония": { code: "EE", label: "Эстония" },
+  "Малайзия": { code: "MY", label: "Малайзия" },
+  "Тайвань": { code: "TW", label: "Тайвань" },
+  "США": { code: "US", label: "США" },
 };
 
 const TRAIT_LABELS: Record<string, string> = {
@@ -177,7 +177,12 @@ export function Filters({
                 className="cursor-pointer select-none transition-colors hover:bg-amber-100"
                 onClick={() => onToggleCountry(country)}
               >
-                {COUNTRY_LABELS[country] || `🏳️ ${country.trim()}`}
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="rounded border border-current/15 bg-white/70 px-1.5 py-0.5 text-[10px] font-bold leading-none">
+                    {(COUNTRY_META[country]?.code || "??").toUpperCase()}
+                  </span>
+                  <span>{COUNTRY_META[country]?.label || country.trim()}</span>
+                </span>
               </Badge>
             ))}
           </div>
