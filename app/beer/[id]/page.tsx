@@ -50,8 +50,8 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
-              {beer.image ? (
-                <BeerDetailImage src={`${beer.image}?w=1000&q=80`} alt={beer.name} />
+              {beer.image || beer.imageRemote ? (
+                <BeerDetailImage src={beer.image ? `${beer.image}?w=1000&q=80` : (beer.imageRemote as string)} alt={beer.name} />
               ) : (
                 <div className="flex aspect-square items-center justify-center rounded-3xl border bg-amber-50 text-amber-300 shadow-sm">
                   No image
