@@ -3,21 +3,14 @@
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FallingPattern } from "@/components/ui/falling-pattern";
+import { HeroOrbs } from "@/components/ui/hero-orbs";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200 py-16 sm:py-24">
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200" />
       <div className="absolute inset-0 z-10 opacity-90">
-        <FallingPattern
-          className="h-full w-full"
-          color="rgba(255,255,255,0.28)"
-          backgroundColor="rgba(255,255,255,0.04)"
-          blurIntensity="0.9em"
-          duration={120}
-          density={1}
-        />
+        <HeroOrbs />
       </div>
 
       <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">
