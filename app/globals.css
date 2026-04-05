@@ -147,31 +147,32 @@
   left: -10%;
   width: 120%;
   border-radius: 9999px;
-  filter: blur(12px);
-  opacity: 0.45;
+  filter: blur(8px);
+  opacity: 0.8;
+  mix-blend-mode: multiply;
   background-repeat: repeat-x;
   background-size: 50% 100%;
   animation: wave-slide linear infinite;
 }
 
 .hero-wave-1 {
-  top: 12%;
-  height: 140px;
-  background-image: radial-gradient(60% 100% at 50% 100%, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0) 70%);
+  top: 8%;
+  height: 180px;
+  background-image: radial-gradient(60% 100% at 50% 100%, rgba(251, 191, 36, 0.34) 0%, rgba(251, 191, 36, 0) 70%);
   animation-duration: 18s;
 }
 
 .hero-wave-2 {
-  top: 36%;
-  height: 180px;
-  background-image: radial-gradient(60% 100% at 50% 100%, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0) 72%);
+  top: 30%;
+  height: 210px;
+  background-image: radial-gradient(60% 100% at 50% 100%, rgba(245, 158, 11, 0.26) 0%, rgba(245, 158, 11, 0) 72%);
   animation-duration: 24s;
 }
 
 .hero-wave-3 {
-  top: 60%;
-  height: 160px;
-  background-image: radial-gradient(60% 100% at 50% 100%, rgba(253, 224, 71, 0.14) 0%, rgba(253, 224, 71, 0) 74%);
+  top: 54%;
+  height: 190px;
+  background-image: radial-gradient(60% 100% at 50% 100%, rgba(253, 224, 71, 0.22) 0%, rgba(253, 224, 71, 0) 74%);
   animation-duration: 30s;
 }
 

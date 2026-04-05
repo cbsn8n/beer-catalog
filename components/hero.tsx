@@ -64,7 +64,7 @@ export function Hero() {
               >
                 <Bubbles />
                 <span className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <span className="relative z-10 mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30">
+                <span className="relative z-10 mr-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/80 bg-transparent shadow-[0_0_0_4px_rgba(255,255,255,0.12)]">
                   <Plus className="h-7 w-7 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-125" />
                 </span>
                 <span className="relative z-10">Добавить пиво в базу</span>
