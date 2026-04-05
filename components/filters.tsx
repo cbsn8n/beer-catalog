@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { getFlag } from "@/lib/country-flags";
 import type { Beer } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -35,42 +36,6 @@ const SORT_COLORS: Record<string, string> = {
   "Портер": "border-neutral-300 bg-neutral-100 text-neutral-800 hover:bg-neutral-200",
   "Стаут": "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
   "Фруктовое": "border-pink-200 bg-pink-50 text-pink-800 hover:bg-pink-100",
-};
-
-const COUNTRY_LABELS: Record<string, { flag: string; label: string }> = {
-  "Россия": { flag: "🇷🇺", label: "Россия" },
-  "Германия": { flag: "🇩🇪", label: "Германия" },
-  "Германия ": { flag: "🇩🇪", label: "Германия" },
-  "Чехия": { flag: "🇨🇿", label: "Чехия" },
-  "Бельгия": { flag: "🇧🇪", label: "Бельгия" },
-  "Литва": { flag: "🇱🇹", label: "Литва" },
-  "Польша": { flag: "🇵🇱", label: "Польша" },
-  "Тайланд": { flag: "🇹🇭", label: "Тайланд" },
-  "Вьетнам": { flag: "🇻🇳", label: "Вьетнам" },
-  "Япония": { flag: "🇯🇵", label: "Япония" },
-  "Мексика": { flag: "🇲🇽", label: "Мексика" },
-  "Нидерланды": { flag: "🇳🇱", label: "Нидерланды" },
-  "Испания": { flag: "🇪🇸", label: "Испания" },
-  "Италия": { flag: "🇮🇹", label: "Италия" },
-  "Ирландия": { flag: "🇮🇪", label: "Ирландия" },
-  "Франция": { flag: "🇫🇷", label: "Франция" },
-  "Великобритания": { flag: "🇬🇧", label: "Великобритания" },
-  "Латвия": { flag: "🇱🇻", label: "Латвия" },
-  "Белоруссия": { flag: "🇧🇾", label: "Белоруссия" },
-  "Китай": { flag: "🇨🇳", label: "Китай" },
-  "Корея": { flag: "🇰🇷", label: "Корея" },
-  "Австрия": { flag: "🇦🇹", label: "Австрия" },
-  "Казахстан": { flag: "🇰🇿", label: "Казахстан" },
-  "Армения": { flag: "🇦🇲", label: "Армения" },
-  "Узбекистан": { flag: "🇺🇿", label: "Узбекистан" },
-  "Бразилия": { flag: "🇧🇷", label: "Бразилия" },
-  "Канада": { flag: "🇨🇦", label: "Канада" },
-  "Дания": { flag: "🇩🇰", label: "Дания" },
-  "Шотландия": { flag: "🏴", label: "Шотландия" },
-  "Эстония": { flag: "🇪🇪", label: "Эстония" },
-  "Малайзия": { flag: "🇲🇾", label: "Малайзия" },
-  "Тайвань": { flag: "🇹🇼", label: "Тайвань" },
-  "США": { flag: "🇺🇸", label: "США" },
 };
 
 const TRAIT_LABELS: Record<string, string> = {
@@ -178,10 +143,13 @@ export function Filters({
                 onClick={() => onToggleCountry(country)}
               >
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="text-sm leading-none" style={{ fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif' }}>
-                    {COUNTRY_LABELS[country]?.flag || "🏳️"}
+                  <span
+                    className="text-sm leading-none"
+                    style={{ fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif' }}
+                  >
+                    {getFlag(country)}
                   </span>
-                  <span>{COUNTRY_LABELS[country]?.label || country.trim()}</span>
+                  <span>{country.trim()}</span>
                 </span>
               </Badge>
             ))}
