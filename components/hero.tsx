@@ -3,15 +3,12 @@
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HeroOrbs } from "@/components/ui/hero-orbs";
+import { BeerBubblesBackground } from "@/components/ui/beer-bubbles-background";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200 py-16 sm:py-24">
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-orange-500 via-amber-500 to-orange-200" />
-      <div className="absolute inset-0 z-10 opacity-90">
-        <HeroOrbs />
-      </div>
+    <section className="hero-beer-bg relative overflow-hidden py-16 sm:py-24">
+      <BeerBubblesBackground />
 
       <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">
         <motion.div
@@ -44,9 +41,6 @@ export function Hero() {
           </div>
         </motion.div>
       </div>
-
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-100/40 blur-3xl" />
     </section>
   );
 }
