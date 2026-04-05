@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowDownAZ, ArrowUpDown, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import type { Beer } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -12,15 +12,15 @@ interface FiltersProps {
   beers: Beer[];
   selectedSorts: string[];
   selectedCountries: string[];
+  selectedTraits: string[];
   ratingRange: [number, number];
   priceRange: [number, number];
   maxPrice: number;
   searchQuery: string;
-  sortBy: "name" | "price";
   onSearchChange: (value: string) => void;
-  onSortByChange: (value: "name" | "price") => void;
   onToggleSort: (t: string) => void;
   onToggleCountry: (c: string) => void;
+  onToggleTrait: (trait: string) => void;
   onSetRatingRange: (range: [number, number]) => void;
   onSetPriceRange: (range: [number, number]) => void;
 }
@@ -73,19 +73,29 @@ const COUNTRY_LABELS: Record<string, string> = {
   "США": "🇺🇸 США",
 };
 
+const TRAIT_LABELS: Record<string, string> = {
+  bitter: "Горчит",
+  sour: "Кислит",
+  fruity: "Фруктовое",
+  smoked: "Копченое",
+  watery: "Водянистое",
+  spirity: "Спиртовое",
+  socks: "Носки",
+};
+
 export function Filters({
   beers,
   selectedSorts,
   selectedCountries,
+  selectedTraits,
   ratingRange,
   priceRange,
   maxPrice,
   searchQuery,
-  sortBy,
   onSearchChange,
-  onSortByChange,
   onToggleSort,
   onToggleCountry,
+  onToggleTrait,
   onSetRatingRange,
   onSetPriceRange,
 }: FiltersProps) {
@@ -113,17 +123,14 @@ export function Filters({
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h2 className="mb-6 text-2xl font-bold text-gray-900">Выбери своё пиво на вечер:</h2>
       <div className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Поиск по названию пива"
-              className="pl-10"
-            />
-          </div>
-          <div className="hidden" />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Поиск по названию пива"
+            className="pl-10"
+          />
         </div>
 
         <div>
@@ -173,6 +180,25 @@ export function Filters({
                 {COUNTRY_LABELS[country] || `🏳️ ${country.trim()}`}
               </Badge>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Характеристики</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(TRAIT_LABELS).map(([key, label]) => {
+              const active = selectedTraits.includes(key);
+              return (
+                <Badge
+                  key={key}
+                  variant={active ? "default" : "outline"}
+                  className="cursor-pointer select-none transition-colors hover:bg-amber-100"
+                  onClick={() => onToggleTrait(key)}
+                >
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
         </div>
 

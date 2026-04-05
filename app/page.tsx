@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { ArrowDownAZ, ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownUp, ArrowUpDown, Loader2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
@@ -16,9 +16,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "price">("name");
+  const [sortBy, setSortBy] = useState<"name" | "price" | "rating">("name");
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [ratingRange, setRatingRange] = useState<[number, number]>([1, 10]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
 
@@ -57,12 +58,19 @@ export default function Home() {
     );
   }, []);
 
+  const toggleTrait = useCallback((trait: string) => {
+    setSelectedTraits((prev) =>
+      prev.includes(trait) ? prev.filter((t) => t !== trait) : [...prev, trait]
+    );
+  }, []);
+
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const list = beers.filter((beer) => {
       if (q && !beer.name.toLowerCase().includes(q)) return false;
       if (selectedSorts.length > 0 && (!beer.sort || !selectedSorts.includes(beer.sort))) return false;
       if (selectedCountries.length > 0 && (!beer.country || !selectedCountries.includes(beer.country))) return false;
+      if (selectedTraits.some((trait) => !(beer.traits as Record<string, boolean>)[trait])) return false;
       if (beer.rating != null && (beer.rating < ratingRange[0] || beer.rating > ratingRange[1])) return false;
       if (beer.price != null && (beer.price < priceRange[0] || beer.price > priceRange[1])) return false;
       return true;
@@ -72,9 +80,12 @@ export default function Home() {
       if (sortBy === "price") {
         return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
       }
+      if (sortBy === "rating") {
+        return (b.rating ?? -1) - (a.rating ?? -1);
+      }
       return a.name.localeCompare(b.name, "ru");
     });
-  }, [beers, searchQuery, selectedSorts, selectedCountries, ratingRange, priceRange, sortBy]);
+  }, [beers, searchQuery, selectedSorts, selectedCountries, selectedTraits, ratingRange, priceRange, sortBy]);
 
   return (
     <>
@@ -93,15 +104,15 @@ export default function Home() {
               beers={beers}
               selectedSorts={selectedSorts}
               selectedCountries={selectedCountries}
+              selectedTraits={selectedTraits}
               ratingRange={ratingRange}
               priceRange={priceRange}
               maxPrice={maxPrice}
               searchQuery={searchQuery}
-              sortBy={sortBy}
               onSearchChange={setSearchQuery}
-              onSortByChange={setSortBy}
               onToggleSort={toggleSort}
               onToggleCountry={toggleCountry}
+              onToggleTrait={toggleTrait}
               onSetRatingRange={setRatingRange}
               onSetPriceRange={setPriceRange}
             />
@@ -109,25 +120,17 @@ export default function Home() {
               beers={filtered}
               sortControls={(
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={sortBy === "name" ? "default" : "outline"}
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setSortBy("name")}
-                  >
+                  <Button type="button" variant={sortBy === "name" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("name")}>
                     <ArrowDownAZ className="h-4 w-4" />
                     По названию
                   </Button>
-                  <Button
-                    type="button"
-                    variant={sortBy === "price" ? "default" : "outline"}
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setSortBy("price")}
-                  >
+                  <Button type="button" variant={sortBy === "price" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("price")}>
                     <ArrowUpDown className="h-4 w-4" />
                     По цене
+                  </Button>
+                  <Button type="button" variant={sortBy === "rating" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("rating")}>
+                    <Star className="h-4 w-4" />
+                    По рейтингу
                   </Button>
                 </div>
               )}

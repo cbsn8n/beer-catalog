@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { MapPin, Star, Beer as BeerIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import type { Beer } from "@/lib/types";
 
 export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
   return (
+    <Link href={`/beer/${beer.id}`} className="block">
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -56,5 +58,6 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
         </CardContent>
       </Card>
     </motion.div>
+    </Link>
   );
 }

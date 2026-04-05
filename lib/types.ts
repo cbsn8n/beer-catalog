@@ -2,6 +2,7 @@ export interface Beer {
   id: number;
   name: string;
   image: string | null;
+  imageRemote?: string | null;
   type: string | null;
   sort: string | null;
   filtration: string | null;
