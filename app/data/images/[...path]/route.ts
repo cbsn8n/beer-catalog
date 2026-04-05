@@ -13,9 +13,21 @@ async function ensureLocalImage(fileName: string): Promise<string | null> {
 
   if (!fs.existsSync(BEERS_JSON)) return null;
   const beers = JSON.parse(fs.readFileSync(BEERS_JSON, "utf-8"));
-  const numericId = Number.parseInt(path.parse(fileName).name, 10);
-  const beer = beers.find((b: any) => b.id === numericId);
-  const remote = beer?.imageRemote;
+
+  let remote: string | null = null;
+  for (const beer of beers) {
+    const images = beer.images || [];
+    const found = images.find((img: any) => img?.local === `/data/images/${fileName}`);
+    if (found?.remote) {
+      remote = found.remote;
+      break;
+    }
+    if (beer.image === `/data/images/${fileName}` && beer.imageRemote) {
+      remote = beer.imageRemote;
+      break;
+    }
+  }
+
   if (!remote) return null;
 
   fs.mkdirSync(IMAGES_DIR, { recursive: true });
