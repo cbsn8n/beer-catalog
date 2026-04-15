@@ -13,6 +13,17 @@ type SearchResult = {
   sourceName?: string | null;
 };
 
+type GenerateJob = {
+  jobId: string;
+  beerId: number;
+  sourceImageUrl: string;
+  model: string;
+  status: "pending" | "succeeded" | "failed";
+  resultImageUrl?: string;
+  error?: string;
+  updatedAt: string;
+};
+
 export function BeerImageGallery({
   images,
   alt,
@@ -57,6 +68,9 @@ export function BeerImageGallery({
   const [searchErr, setSearchErr] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [applyBusyUrl, setApplyBusyUrl] = useState<string | null>(null);
+  const [generateJob, setGenerateJob] = useState<GenerateJob | null>(null);
+  const [generateBusy, setGenerateBusy] = useState<"start" | "regen" | null>(null);
+  const [generateErr, setGenerateErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (active >= normalized.length) {
@@ -74,6 +88,31 @@ export function BeerImageGallery({
       document.body.style.overflow = overflow;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!isAdmin || !beerId) return;
+
+    let mounted = true;
+
+    const load = async () => {
+      const res = await fetch(`/api/beeradm/image-generate?beerId=${beerId}`, { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      if (!mounted) return;
+      if (res.ok) {
+        setGenerateJob((data?.job as GenerateJob | null) || null);
+      }
+    };
+
+    load().catch(() => null);
+    const timer = setInterval(() => {
+      load().catch(() => null);
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [isAdmin, beerId]);
 
   if (normalized.length === 0) {
     return (
@@ -147,11 +186,12 @@ export function BeerImageGallery({
     }
   };
 
-  const applyAsPrimary = async (result: SearchResult) => {
+  const applyRemoteImage = async (imageUrl: string) => {
     if (!isAdmin || !beerId || applyBusyUrl) return;
 
-    setApplyBusyUrl(result.imageUrl);
+    setApplyBusyUrl(imageUrl);
     setSearchErr(null);
+    setGenerateErr(null);
 
     try {
       const res = await fetch("/api/beeradm/images", {
@@ -160,7 +200,7 @@ export function BeerImageGallery({
         body: JSON.stringify({
           action: "setPrimaryFromRemote",
           beerId,
-          imageUrl: result.imageUrl,
+          imageUrl,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -169,9 +209,44 @@ export function BeerImageGallery({
       setRotateMsg("Новое фото установлено первым в карточке");
       router.refresh();
     } catch (err) {
-      setSearchErr(err instanceof Error ? err.message : "Ошибка применения фото");
+      const msg = err instanceof Error ? err.message : "Ошибка применения фото";
+      setSearchErr(msg);
+      setGenerateErr(msg);
     } finally {
       setApplyBusyUrl(null);
+    }
+  };
+
+  const applyAsPrimary = async (result: SearchResult) => {
+    await applyRemoteImage(result.imageUrl);
+  };
+
+  const startGenerate = async (mode: "start" | "regen") => {
+    if (!isAdmin || !beerId || generateBusy) return;
+
+    setGenerateBusy(mode);
+    setGenerateErr(null);
+    setRotateMsg(null);
+
+    try {
+      const sourceImageUrl = current.local || current.main;
+      const res = await fetch("/api/beeradm/image-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          beerId,
+          sourceImageUrl,
+          mode: mode === "regen" ? "regenerate" : "start",
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
+      setGenerateJob((data?.job as GenerateJob | null) || null);
+    } catch (err) {
+      setGenerateErr(err instanceof Error ? err.message : "Ошибка генерации");
+    } finally {
+      setGenerateBusy(null);
     }
   };
 
@@ -224,16 +299,16 @@ export function BeerImageGallery({
         </div>
       )}
 
-      {isAdmin && current?.local && (
+      {isAdmin && (
         <div className="mt-3 rounded-xl border bg-amber-50 p-3">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
             Админ: поворот выбранного фото
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy)} onClick={() => rotateCurrent(90)}>
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !current?.local} onClick={() => rotateCurrent(90)}>
               {rotateBusy === "cw" ? "..." : "+90°"}
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy)} onClick={() => rotateCurrent(-90)}>
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !current?.local} onClick={() => rotateCurrent(-90)}>
               {rotateBusy === "ccw" ? "..." : "-90°"}
             </Button>
             <span className="text-xs text-gray-600">Будет повернуто только текущее выбранное фото</span>
@@ -280,6 +355,54 @@ export function BeerImageGallery({
                 ))}
               </div>
             )}
+
+            <div className="mt-3 border-t border-amber-200 pt-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+                Генерация фото на белом фоне
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("start")}>
+                  {generateBusy === "start" ? "Генерирую..." : "Сгенерировать картинку"}
+                </Button>
+                {generateJob?.status === "succeeded" && generateJob.resultImageUrl && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={Boolean(applyBusyUrl)}
+                      onClick={() => applyRemoteImage(generateJob.resultImageUrl!)}
+                    >
+                      {applyBusyUrl === generateJob.resultImageUrl ? "Применяю..." : "Поставить на главную"}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("regen")}>
+                      {generateBusy === "regen" ? "Перегенерирую..." : "Перегенерировать"}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {generateErr && <div className="mt-2 text-xs text-red-600">{generateErr}</div>}
+
+              {generateJob?.status === "pending" && (
+                <div className="mt-2 rounded-lg border bg-white p-2">
+                  <div className="mb-1 text-xs text-gray-600">Генерация выполняется ({generateJob.model})...</div>
+                  <div className="h-24 animate-pulse rounded bg-gray-100" />
+                </div>
+              )}
+
+              {generateJob?.status === "failed" && (
+                <div className="mt-2 text-xs text-red-600">Генерация не удалась: {generateJob.error || "unknown error"}</div>
+              )}
+
+              {generateJob?.status === "succeeded" && generateJob.resultImageUrl && (
+                <div className="mt-2 overflow-hidden rounded-lg border bg-white p-2">
+                  <div className="mb-1 text-xs text-gray-600">Сгенерированный вариант ({generateJob.model})</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={generateJob.resultImageUrl} alt="Generated beer" className="h-44 w-full rounded object-contain" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -52,6 +52,9 @@ beer-catalog/
 │   │   ├── beeradm/login/route.ts  # POST — вход в админку
 │   │   ├── beeradm/logout/route.ts # POST — выход из админки
 │   │   ├── beeradm/moderation/route.ts # GET/POST — очередь модерации
+│   │   ├── beeradm/image-search/route.ts # POST — поиск внешних фото для админа
+│   │   ├── beeradm/image-generate/route.ts # GET/POST — генерация фото для админа
+│   │   ├── beeradm/image-generate/webhook/route.ts # webhook готового результата
 │   │   ├── beeradm/images/route.ts # GET/POST — инструменты поворота фото
 │   │   └── beer-image/route.ts # (legacy) SVG placeholder генератор
 │   └── data/
@@ -191,6 +194,7 @@ Sync скачивает все записи из NocoDB, сохраняет `dat
 - [x] **Добавление пива** — через модерацию: поиск дублей + заявка на новое пиво
 - [x] **Изменения существующей карточки** — rating/comment/photo отправляются на модерацию
 - [x] **Поворот фото в админке** — по одной карточке и массово (+90/-90)
+- [x] **Поиск/генерация фото в админке** — lens + name + generate + apply as primary
 - [x] **Базовая админка `/beeradm`** — вход по паролю + защищённый запуск Sync
 - [x] **История sync + audit log в админке**
 - [x] **Кнопка Sync в UI** — только в админке
