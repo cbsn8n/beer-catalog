@@ -6,7 +6,24 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { BeerImage } from "@/lib/types";
 
-export function BeerImageGallery({ images, alt, isAdmin = false }: { images: BeerImage[]; alt: string; isAdmin?: boolean }) {
+type SearchResult = {
+  title: string;
+  imageUrl: string;
+  sourceUrl?: string | null;
+  sourceName?: string | null;
+};
+
+export function BeerImageGallery({
+  images,
+  alt,
+  isAdmin = false,
+  beerId,
+}: {
+  images: BeerImage[];
+  alt: string;
+  isAdmin?: boolean;
+  beerId?: number;
+}) {
   const router = useRouter();
 
   const normalized = useMemo(() => {
@@ -36,6 +53,10 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
   const [rotateBusy, setRotateBusy] = useState<"cw" | "ccw" | null>(null);
   const [rotateMsg, setRotateMsg] = useState<string | null>(null);
   const [rotateErr, setRotateErr] = useState<string | null>(null);
+  const [searchBusy, setSearchBusy] = useState<"lens" | "name" | null>(null);
+  const [searchErr, setSearchErr] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [applyBusyUrl, setApplyBusyUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (active >= normalized.length) {
@@ -93,6 +114,62 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
       setRotateErr(err instanceof Error ? err.message : "Ошибка поворота");
     } finally {
       setRotateBusy(null);
+    }
+  };
+
+  const runSearch = async (mode: "lens" | "name") => {
+    if (!isAdmin || searchBusy) return;
+
+    setSearchBusy(mode);
+    setSearchErr(null);
+    setSearchResults([]);
+
+    try {
+      const payload = mode === "lens"
+        ? { mode, imageUrl: current.main }
+        : { mode, query: alt };
+
+      const res = await fetch("/api/beeradm/image-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
+      setSearchResults(Array.isArray(data?.results) ? data.results : []);
+    } catch (err) {
+      setSearchErr(err instanceof Error ? err.message : "Ошибка поиска");
+    } finally {
+      setSearchBusy(null);
+    }
+  };
+
+  const applyAsPrimary = async (result: SearchResult) => {
+    if (!isAdmin || !beerId || applyBusyUrl) return;
+
+    setApplyBusyUrl(result.imageUrl);
+    setSearchErr(null);
+
+    try {
+      const res = await fetch("/api/beeradm/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "setPrimaryFromRemote",
+          beerId,
+          imageUrl: result.imageUrl,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
+      setRotateMsg("Новое фото установлено первым в карточке");
+      router.refresh();
+    } catch (err) {
+      setSearchErr(err instanceof Error ? err.message : "Ошибка применения фото");
+    } finally {
+      setApplyBusyUrl(null);
     }
   };
 
@@ -161,6 +238,47 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
           </div>
           {rotateErr && <div className="mt-2 text-xs text-red-600">{rotateErr}</div>}
           {rotateMsg && <div className="mt-2 text-xs text-emerald-700">{rotateMsg}</div>}
+
+          <div className="mt-3 border-t border-amber-200 pt-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+              Поиск более качественного фото
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("lens")}>
+                {searchBusy === "lens" ? "Ищу..." : "Поиск по картинке"}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("name")}>
+                {searchBusy === "name" ? "Ищу..." : "Поиск по названию"}
+              </Button>
+            </div>
+
+            {searchErr && <div className="mt-2 text-xs text-red-600">{searchErr}</div>}
+
+            {searchResults.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {searchResults.map((res) => (
+                  <div key={res.imageUrl} className="overflow-hidden rounded-lg border bg-white">
+                    <div className="aspect-square overflow-hidden bg-stone-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={res.imageUrl} alt={res.title} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="space-y-1 p-2">
+                      <div className="line-clamp-2 text-[11px] text-gray-700" title={res.title}>{res.title}</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full"
+                        disabled={Boolean(applyBusyUrl)}
+                        onClick={() => applyAsPrimary(res)}
+                      >
+                        {applyBusyUrl === res.imageUrl ? "Применяю..." : "Сделать основным"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

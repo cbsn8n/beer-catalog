@@ -72,7 +72,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
-              <BeerImageGallery images={images} alt={beer.name} isAdmin={isAdmin} />
+              <BeerImageGallery images={images} alt={beer.name} isAdmin={isAdmin} beerId={beer.id} />
             </div>
 
             <div>

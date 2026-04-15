@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { addAuditEntry } from "@/lib/beeradm";
 import { listBeersWithLocalImages, rotateBeerImages, rotateLocalImage, rotateManyBeers } from "@/lib/beer-images-admin";
+import { setBeerPrimaryImageFromRemote } from "@/lib/beer-admin-curation";
 
 function parseDegrees(value: unknown): 90 | -90 {
   return Number(value) === -90 ? -90 : 90;
@@ -57,9 +58,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, action, degrees, ...result });
     }
 
+    if (action === "setPrimaryFromRemote") {
+      const beerId = Number(body?.beerId);
+      const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl.trim() : "";
+
+      if (!Number.isFinite(beerId) || !imageUrl) {
+        return NextResponse.json({ error: "beerId and imageUrl are required" }, { status: 400 });
+      }
+
+      const result = await setBeerPrimaryImageFromRemote(beerId, imageUrl);
+      addAuditEntry("admin_set_primary_image", {
+        beerId,
+        imageUrl,
+        localUrl: result.localUrl,
+      });
+      return NextResponse.json({ ok: true, action, ...result });
+    }
+
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Unknown error" }, { status: 500 });
   }
 }
-
