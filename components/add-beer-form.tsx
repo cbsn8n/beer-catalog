@@ -193,7 +193,9 @@ export function AddBeerForm() {
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {matches.map((beer) => {
-              const preview = beer.image ? `${beer.image}?w=120&q=60` : beer.imageRemote;
+              const preview = beer.image
+                ? `${beer.image}?w=120&q=60${beer.imageVersion ? `&v=${beer.imageVersion}` : ""}`
+                : beer.imageRemote;
 
               return (
                 <Link

@@ -18,11 +18,36 @@ import type { Beer } from "@/lib/types";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const JSON_PATH = path.join(DATA_DIR, "beers.json");
+const IMAGES_DIR = path.join(DATA_DIR, "images");
 
 function getBeer(id: number): Beer | null {
   if (!fs.existsSync(JSON_PATH)) return null;
   const beers = JSON.parse(fs.readFileSync(JSON_PATH, "utf-8")) as Beer[];
   return beers.find((b) => b.id === id) || null;
+}
+
+function getLocalImageVersion(localUrl: string | null | undefined) {
+  if (!localUrl) return null;
+
+  const [pure] = localUrl.split("?");
+  if (!pure.startsWith("/data/images/")) return null;
+
+  const rel = pure.replace(/^\/data\/images\//, "");
+  const abs = path.join(IMAGES_DIR, rel);
+  if (!abs.startsWith(IMAGES_DIR)) return null;
+
+  try {
+    const stat = fs.statSync(abs);
+    return Math.floor(stat.mtimeMs);
+  } catch {
+    return null;
+  }
+}
+
+function withImageParams(local: string | null | undefined, width: number, quality: number) {
+  if (!local) return null;
+  const v = getLocalImageVersion(local);
+  return `${local}?w=${width}&q=${quality}${v ? `&v=${v}` : ""}`;
 }
 
 const TRAITS: Record<keyof Beer["traits"], string> = {
@@ -48,11 +73,11 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
   const images = beer.images?.length
     ? beer.images.map((img) => ({
-        local: img.local ? `${img.local}?w=1000&q=80` : null,
+        local: withImageParams(img.local, 1000, 80),
         remote: img.remote ?? null,
       }))
     : beer.image || beer.imageRemote
-      ? [{ local: beer.image ? `${beer.image}?w=1000&q=80` : null, remote: beer.imageRemote ?? null }]
+      ? [{ local: withImageParams(beer.image, 1000, 80), remote: beer.imageRemote ?? null }]
       : [];
 
   return (

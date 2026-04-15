@@ -14,7 +14,9 @@ export interface BeerImageAdminSummary {
   country: string | null;
   sort: string | null;
   preview: string | null;
+  previewVersion: number | null;
   localImages: string[];
+  suspicious: boolean;
 }
 
 function readBeers(): Beer[] {
@@ -56,6 +58,34 @@ function localUrlToAbsPath(localUrl: string) {
   return absPath;
 }
 
+function getVersion(localUrl: string | null | undefined) {
+  if (!localUrl) return null;
+  const abs = localUrlToAbsPath(localUrl);
+  if (!abs || !fs.existsSync(abs)) return null;
+  try {
+    return Math.floor(fs.statSync(abs).mtimeMs);
+  } catch {
+    return null;
+  }
+}
+
+async function isSuspiciousLocal(localUrl: string) {
+  const abs = localUrlToAbsPath(localUrl);
+  if (!abs || !fs.existsSync(abs)) return false;
+
+  try {
+    const meta = await sharp(abs).metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+    if (!width || !height) return false;
+
+    // Heuristic: bottle images are usually portrait.
+    return width > height * 1.08;
+  } catch {
+    return false;
+  }
+}
+
 function invalidateThumbCacheForLocal(localUrl: string) {
   const abs = localUrlToAbsPath(localUrl);
   if (!abs) return;
@@ -75,22 +105,29 @@ function invalidateThumbCacheForLocal(localUrl: string) {
   }
 }
 
-export function listBeersWithLocalImages(): BeerImageAdminSummary[] {
+export async function listBeersWithLocalImages(): Promise<BeerImageAdminSummary[]> {
   const beers = readBeers();
 
-  return beers
-    .map((beer) => {
+  const items = await Promise.all(
+    beers.map(async (beer) => {
       const localImages = collectBeerLocalImages(beer);
+      const suspiciousFlags = await Promise.all(localImages.map((img) => isSuspiciousLocal(img)));
+      const suspicious = suspiciousFlags.some(Boolean);
+
       return {
         id: beer.id,
         name: beer.name,
         country: beer.country,
         sort: beer.sort,
         preview: localImages[0] || beer.image || beer.imageRemote || null,
+        previewVersion: getVersion(localImages[0] || beer.image || null),
         localImages,
+        suspicious,
       };
     })
-    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  );
+
+  return items.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
 export async function rotateLocalImage(localUrl: string, degrees: 90 | -90 = 90) {
@@ -133,4 +170,3 @@ export async function rotateManyBeers(beerIds: number[], degrees: 90 | -90 = 90)
 
   return { rotated, details };
 }
-

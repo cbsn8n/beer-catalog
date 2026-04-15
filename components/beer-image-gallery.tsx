@@ -10,8 +10,15 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
     const result: { main: string; thumb: string }[] = [];
 
     for (const img of images) {
-      const main = img.local || img.remote;
-      const thumb = img.local ? `${img.local}${img.local.includes("?") ? "&" : "?"}w=240&q=44` : (img.remote || img.local);
+      const localWithVersion = img.local
+        ? `${img.local}${img.version ? `${img.local.includes("?") ? "&" : "?"}v=${img.version}` : ""}`
+        : null;
+
+      const main = localWithVersion || img.remote;
+      const thumb = localWithVersion
+        ? `${localWithVersion}${localWithVersion.includes("?") ? "&" : "?"}w=240&q=44`
+        : (img.remote || localWithVersion);
+
       if (!main) continue;
       if (seen.has(main)) continue;
       seen.add(main);

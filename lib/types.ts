@@ -1,12 +1,14 @@
 export interface BeerImage {
   local: string | null;
   remote: string | null;
+  version?: number | null;
 }
 
 export interface Beer {
   id: number;
   name: string;
   image: string | null;
+  imageVersion?: number | null;
   imageRemote?: string | null;
   images?: BeerImage[];
   type: string | null;

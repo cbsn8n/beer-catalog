@@ -12,7 +12,9 @@ type Item = {
   country: string | null;
   sort: string | null;
   preview: string | null;
+  previewVersion: number | null;
   localImages: string[];
+  suspicious: boolean;
 };
 
 export function BeeradmImageTools() {
@@ -21,6 +23,7 @@ export function BeeradmImageTools() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [onlySuspicious, setOnlySuspicious] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -45,9 +48,9 @@ export function BeeradmImageTools() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((x) => x.name.toLowerCase().includes(q));
-  }, [items, query]);
+    const byQuery = q ? items.filter((x) => x.name.toLowerCase().includes(q)) : items;
+    return onlySuspicious ? byQuery.filter((x) => x.suspicious) : byQuery;
+  }, [items, query, onlySuspicious]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
@@ -97,12 +100,22 @@ export function BeeradmImageTools() {
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск карточки по названию"
-          className="h-10 sm:max-w-sm"
-        />
+        <div className="flex flex-col gap-2 sm:max-w-sm">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Поиск карточки по названию"
+            className="h-10"
+          />
+          <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={onlySuspicious}
+              onChange={(e) => setOnlySuspicious(e.target.checked)}
+            />
+            Автофильтр: только потенциально повернутые (ширина &gt; высоты)
+          </label>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={busy || selected.length === 0} onClick={() => rotateSelected(90)} className="gap-2">
@@ -158,10 +171,19 @@ export function BeeradmImageTools() {
                       <div className="h-14 w-14 overflow-hidden rounded border bg-stone-100">
                         {item.preview ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.preview.includes("?") ? item.preview : `${item.preview}?w=140&q=65`} alt={item.name} className="h-full w-full object-cover" />
+                          <img
+                            src={item.preview.includes("?")
+                              ? item.preview
+                              : `${item.preview}?w=140&q=65${item.previewVersion ? `&v=${item.previewVersion}` : ""}`}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                          />
                         ) : null}
                       </div>
-                      <div className="text-xs text-gray-500">локальных фото: {item.localImages.length}</div>
+                      <div className="text-xs text-gray-500">
+                        локальных фото: {item.localImages.length}
+                        {item.suspicious ? " • подозрение на поворот" : ""}
+                      </div>
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right">
@@ -183,4 +205,3 @@ export function BeeradmImageTools() {
     </div>
   );
 }
-
