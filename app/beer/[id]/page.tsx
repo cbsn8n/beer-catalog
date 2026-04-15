@@ -11,7 +11,6 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import { BeerContributionForm } from "@/components/beer-contribution-form";
-import { BeerAdminRotateControls } from "@/components/beer-admin-rotate-controls";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
@@ -44,12 +43,6 @@ function getLocalImageVersion(localUrl: string | null | undefined) {
   }
 }
 
-function withImageParams(local: string | null | undefined, width: number, quality: number) {
-  if (!local) return null;
-  const v = getLocalImageVersion(local);
-  return `${local}?w=${width}&q=${quality}${v ? `&v=${v}` : ""}`;
-}
-
 const TRAITS: Record<keyof Beer["traits"], string> = {
   bitter: "Горчит",
   sour: "Кислит",
@@ -71,13 +64,16 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
+  const imageVersion = getLocalImageVersion(beer.image);
+
   const images = beer.images?.length
     ? beer.images.map((img) => ({
-        local: withImageParams(img.local, 1000, 80),
+        local: img.local,
+        version: img.local ? getLocalImageVersion(img.local) : null,
         remote: img.remote ?? null,
       }))
     : beer.image || beer.imageRemote
-      ? [{ local: withImageParams(beer.image, 1000, 80), remote: beer.imageRemote ?? null }]
+      ? [{ local: beer.image, version: imageVersion, remote: beer.imageRemote ?? null }]
       : [];
 
   return (
@@ -94,8 +90,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
-              <BeerImageGallery images={images} alt={beer.name} />
-              {isAdmin && <BeerAdminRotateControls beerId={beer.id} />}
+              <BeerImageGallery images={images} alt={beer.name} isAdmin={isAdmin} />
             </div>
 
             <div>

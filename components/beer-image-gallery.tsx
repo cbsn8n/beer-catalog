@@ -1,13 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { BeerImage } from "@/lib/types";
 
-export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: string }) {
+export function BeerImageGallery({ images, alt, isAdmin = false }: { images: BeerImage[]; alt: string; isAdmin?: boolean }) {
+  const router = useRouter();
+
   const normalized = useMemo(() => {
     const seen = new Set<string>();
-    const result: { main: string; thumb: string }[] = [];
+    const result: { main: string; thumb: string; local: string | null }[] = [];
 
     for (const img of images) {
       const localWithVersion = img.local
@@ -22,13 +26,16 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
       if (!main) continue;
       if (seen.has(main)) continue;
       seen.add(main);
-      result.push({ main, thumb: thumb || main });
+      result.push({ main, thumb: thumb || main, local: img.local || null });
     }
 
     return result;
   }, [images]);
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
+  const [rotateBusy, setRotateBusy] = useState<"cw" | "ccw" | null>(null);
+  const [rotateMsg, setRotateMsg] = useState<string | null>(null);
+  const [rotateErr, setRotateErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +59,31 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
   const current = normalized[active];
   const prev = () => setActive((v) => (v - 1 + normalized.length) % normalized.length);
   const next = () => setActive((v) => (v + 1) % normalized.length);
+
+  const rotateCurrent = async (degrees: 90 | -90) => {
+    if (!isAdmin || !current?.local || rotateBusy) return;
+
+    setRotateBusy(degrees === 90 ? "cw" : "ccw");
+    setRotateErr(null);
+    setRotateMsg(null);
+
+    try {
+      const res = await fetch("/api/beeradm/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rotateImage", image: current.local, degrees }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
+      setRotateMsg(`Повернуто ${degrees > 0 ? "+90°" : "-90°"}`);
+      router.refresh();
+    } catch (err) {
+      setRotateErr(err instanceof Error ? err.message : "Ошибка поворота");
+    } finally {
+      setRotateBusy(null);
+    }
+  };
 
   return (
     <>
@@ -99,6 +131,25 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
               </div>
             </button>
           ))}
+        </div>
+      )}
+
+      {isAdmin && current?.local && (
+        <div className="mt-3 rounded-xl border bg-amber-50 p-3">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+            Админ: поворот выбранного фото
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy)} onClick={() => rotateCurrent(90)}>
+              {rotateBusy === "cw" ? "..." : "+90°"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy)} onClick={() => rotateCurrent(-90)}>
+              {rotateBusy === "ccw" ? "..." : "-90°"}
+            </Button>
+            <span className="text-xs text-gray-600">Будет повернуто только текущее выбранное фото</span>
+          </div>
+          {rotateErr && <div className="mt-2 text-xs text-red-600">{rotateErr}</div>}
+          {rotateMsg && <div className="mt-2 text-xs text-emerald-700">{rotateMsg}</div>}
         </div>
       )}
 
