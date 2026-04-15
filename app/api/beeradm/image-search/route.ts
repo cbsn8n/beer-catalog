@@ -74,6 +74,7 @@ function pickSourceUrl(obj: Record<string, unknown>) {
 
 function extractResults(payload: any): SearchResult[] {
   const buckets: unknown[] = [];
+  if (Array.isArray(payload?.organic)) buckets.push(...payload.organic);
   if (Array.isArray(payload?.visualMatches)) buckets.push(...payload.visualMatches);
   if (Array.isArray(payload?.images_results)) buckets.push(...payload.images_results);
   if (Array.isArray(payload?.image_results)) buckets.push(...payload.image_results);
