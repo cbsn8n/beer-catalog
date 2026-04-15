@@ -4,6 +4,7 @@ import path from "path";
 import https from "https";
 import http from "http";
 import { isAdminRequest } from "@/lib/admin-auth";
+import { addAuditEntry, addSyncHistory } from "@/lib/beeradm";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -69,8 +70,11 @@ async function fetchPage(apiUrl: string, apiKey: string, tableId: string, offset
 }
 
 export async function POST(req: NextRequest) {
+  const startedMs = Date.now();
+  const startedAt = new Date(startedMs).toISOString();
   const body = await req.json().catch(() => ({}));
   const isAdmin = isAdminRequest(req);
+  const trigger: "admin-session" | "secret" = isAdmin ? "admin-session" : "secret";
   const secret = process.env.SYNC_TRIGGER_SECRET;
 
   // Access policy:
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    addAuditEntry("sync_started", { trigger });
     fs.mkdirSync(IMAGES_DIR, { recursive: true });
 
     const allRecords: NocoBeer[] = [];
@@ -165,12 +170,60 @@ export async function POST(req: NextRequest) {
       for (const r of results) if (r.status === "rejected") failed++;
     }
 
-    return NextResponse.json({
-      ok: true,
+    const finishedMs = Date.now();
+    const finishedAt = new Date(finishedMs).toISOString();
+    const durationMs = finishedMs - startedMs;
+
+    addSyncHistory({
+      id: `${startedMs}-${Math.random().toString(16).slice(2, 8)}`,
+      trigger,
+      status: "success",
+      startedAt,
+      finishedAt,
+      durationMs,
       beers: beers.length,
       images: { downloaded, skipped, failed },
     });
+
+    addAuditEntry("sync_finished", {
+      trigger,
+      beers: beers.length,
+      downloaded,
+      skipped,
+      failed,
+      durationMs,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      beers: beers.length,
+      durationMs,
+      images: { downloaded, skipped, failed },
+    });
   } catch (err: any) {
+    const finishedMs = Date.now();
+    const finishedAt = new Date(finishedMs).toISOString();
+    const durationMs = finishedMs - startedMs;
+    const error = err?.message || "Unknown error";
+
+    addSyncHistory({
+      id: `${startedMs}-${Math.random().toString(16).slice(2, 8)}`,
+      trigger,
+      status: "error",
+      startedAt,
+      finishedAt,
+      durationMs,
+      beers: 0,
+      images: { downloaded: 0, skipped: 0, failed: 0 },
+      error,
+    });
+
+    addAuditEntry("sync_failed", {
+      trigger,
+      error,
+      durationMs,
+    });
+
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +11,7 @@ type SyncState =
   | { type: "error"; message: string };
 
 export function AdminSyncButton() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [state, setState] = useState<SyncState>({ type: "idle" });
 
@@ -47,6 +49,7 @@ export function AdminSyncButton() {
         : `Готово: ${beers} позиций, скачано ${downloaded}`;
 
       setState({ type: "ok", message: msg });
+      router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Неизвестная ошибка";
       setState({ type: "error", message });

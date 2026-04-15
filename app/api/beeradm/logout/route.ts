@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME } from "@/lib/admin-auth";
+import { addAuditEntry } from "@/lib/beeradm";
 
 export async function POST() {
+  addAuditEntry("admin_logout");
+
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE_NAME, "", {
     httpOnly: true,
@@ -12,4 +15,3 @@ export async function POST() {
   });
   return res;
 }
-
