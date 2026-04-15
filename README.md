@@ -39,10 +39,14 @@ beer-catalog/
 │   ├── layout.tsx          # Root layout, Geist font, meta
 │   ├── page.tsx            # Главная: состояние фильтров, загрузка данных из /api/beers
 │   ├── beeradm/page.tsx    # Закрытая админка (пароль + сессия)
+│   ├── login/page.tsx      # Вход пользователей через Telegram widget
+│   ├── auth/telegram/callback/route.ts # Callback Telegram Login
 │   ├── globals.css         # Tailwind + shadcn theme
 │   ├── api/
 │   │   ├── beers/route.ts  # GET — отдаёт data/beers.json
 │   │   ├── sync/route.ts   # POST — запускает scripts/sync.ts (npx tsx)
+│   │   ├── auth/me/route.ts # GET — текущий пользователь
+│   │   ├── auth/logout/route.ts # POST — logout пользователя
 │   │   ├── beeradm/login/route.ts  # POST — вход в админку
 │   │   ├── beeradm/logout/route.ts # POST — выход из админки
 │   │   └── beer-image/route.ts # (legacy) SVG placeholder генератор
@@ -132,9 +136,11 @@ interface Beer {
 | `NOCO_DB_API_KEY` | (secret) | Токен NocoDB |
 | `NOCO_DB_TABLE_ID` | mwllcohqjkngvow | ID таблицы |
 | `TELEGRAM_BOT_TOKEN` | (secret) | Для авторизации (TODO) |
-| `TELEGRAM_BOT_USERNAME` | (bot username) | Для login widget (TODO) |
-| `JWT_SECRET` | (secret) | Сессии (TODO) |
+| `TELEGRAM_BOT_USERNAME` | (bot username) | Для login widget |
+| `JWT_SECRET` | (secret) | Подпись user/admin сессий |
 | `ADMIN_PANEL_PASSWORD` | (secret) | Пароль входа в `/beeradm` |
+
+Для Telegram Login в настройках бота должен быть разрешён домен `vana.beer`.
 
 ## Sync (синхронизация с NocoDB)
 
@@ -172,7 +178,7 @@ Sync скачивает все записи из NocoDB, сохраняет `dat
 
 ## TODO (не реализовано)
 
-- [ ] **Telegram авторизация** — login widget, JWT сессии
+- [x] **Telegram авторизация** — login widget + callback verification + JWT cookie session
 - [ ] **Google авторизация** — OAuth
 - [ ] **Админка (beeradm)** — расширить до полноценной панели (роли, granular permissions, IP allowlist)
 - [ ] **Postgres + Prisma** — миграция данных из JSON в БД, комментарии, рейтинги от пользователей
