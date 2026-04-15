@@ -127,12 +127,17 @@ interface Beer {
 - **БД Postgres UUID**: `vg0cw00wcwsgc0skk48o8w80` (пока не используется, создана на будущее)
 
 ### Persistent Storage
-✅ Реализовано в Coolify:
-- volume для `/app/data/images` — фото пива
-- volume для `/app/data/thumbs` — кэш превью
+⚠️ Важно для сохранения карточек/модерации/генерации между деплоями:
+
+Рекомендуемый вариант в Coolify:
+- один persistent volume на **`/app/data`**
 - `DATA_DIR=/app/data`
 
-Благодаря этому фото и превью сохраняются между деплоями.
+Если хранить volume только на `/app/data/images` и `/app/data/thumbs`, то при деплое могут теряться:
+- `beers.json` (карточки/изменения)
+- `data/admin/*` (очередь модерации, audit, jobs)
+
+Итог: для текущей архитектуры нужно персистить весь `/app/data`.
 
 ### Переменные окружения (в Coolify)
 
