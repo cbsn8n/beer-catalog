@@ -9,10 +9,27 @@ type SearchResult = {
   sourceName?: string | null;
 };
 
+function getPublicBaseUrl(req: NextRequest) {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl && /^https?:\/\//i.test(envUrl)) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  const fHost = req.headers.get("x-forwarded-host");
+  if (fHost) {
+    const fProto = req.headers.get("x-forwarded-proto") || "https";
+    return `${fProto}://${fHost}`;
+  }
+
+  const host = req.headers.get("host") || new URL(req.url).host;
+  const proto = req.headers.get("x-forwarded-proto") || new URL(req.url).protocol.replace(":", "") || "https";
+  return `${proto}://${host}`;
+}
+
 function toAbsoluteImageUrl(value: string, req: NextRequest) {
   if (/^https?:\/\//i.test(value)) return value;
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || `${new URL(req.url).origin}`;
+  const base = getPublicBaseUrl(req);
   return `${base}${value.startsWith("/") ? "" : "/"}${value}`;
 }
 
@@ -104,7 +121,7 @@ async function searchByLens(req: NextRequest, imageUrl: string) {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`Serper lens failed: HTTP ${res.status}${txt ? ` - ${txt.slice(0, 160)}` : ""}`);
+    throw new Error(`Serper lens failed: HTTP ${res.status}${txt ? ` - ${txt.slice(0, 220)}` : ""} (target: ${target})`);
   }
 
   const payload = await res.json();
