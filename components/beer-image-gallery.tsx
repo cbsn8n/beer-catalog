@@ -31,11 +31,23 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
 
     return result;
   }, [images]);
-  const [active, setActive] = useState(0);
+  const [activeMain, setActiveMain] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [rotateBusy, setRotateBusy] = useState<"cw" | "ccw" | null>(null);
   const [rotateMsg, setRotateMsg] = useState<string | null>(null);
   const [rotateErr, setRotateErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (normalized.length === 0) {
+      setActiveMain(null);
+      return;
+    }
+
+    const exists = activeMain && normalized.some((item) => item.main === activeMain);
+    if (!exists) {
+      setActiveMain(normalized[0].main);
+    }
+  }, [normalized, activeMain]);
 
   useEffect(() => {
     if (!open) return;
@@ -56,9 +68,16 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
     );
   }
 
-  const current = normalized[active];
-  const prev = () => setActive((v) => (v - 1 + normalized.length) % normalized.length);
-  const next = () => setActive((v) => (v + 1) % normalized.length);
+  const activeIndex = Math.max(0, normalized.findIndex((item) => item.main === activeMain));
+  const current = normalized[activeIndex] || normalized[0];
+  const prev = () => {
+    const idx = (activeIndex - 1 + normalized.length) % normalized.length;
+    setActiveMain(normalized[idx]?.main || normalized[0].main);
+  };
+  const next = () => {
+    const idx = (activeIndex + 1) % normalized.length;
+    setActiveMain(normalized[idx]?.main || normalized[0].main);
+  };
 
   const rotateCurrent = async (degrees: 90 | -90) => {
     if (!isAdmin || !current?.local || rotateBusy) return;
@@ -100,7 +119,7 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
               alt={alt}
               className="block h-full w-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
-                const fallback = images[active]?.remote;
+                const fallback = images[activeIndex]?.remote;
                 if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
               }}
             />
@@ -114,8 +133,8 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
             <button
               key={item.main}
               type="button"
-              onClick={() => setActive(idx)}
-              className={`overflow-hidden rounded-2xl border bg-white ${idx === active ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
+              onClick={() => setActiveMain(item.main)}
+              className={`overflow-hidden rounded-2xl border bg-white ${idx === activeIndex ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
             >
               <div className="aspect-square overflow-hidden bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -183,7 +202,7 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
                 alt={alt}
                 className="mx-auto block h-auto max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
                 onError={(e) => {
-                  const fallback = images[active]?.remote;
+                  const fallback = images[activeIndex]?.remote;
                   if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
                 }}
               />
