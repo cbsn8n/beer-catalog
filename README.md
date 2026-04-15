@@ -38,12 +38,13 @@ beer-catalog/
 ├── app/
 │   ├── layout.tsx          # Root layout, Geist font, meta
 │   ├── page.tsx            # Главная: состояние фильтров, загрузка данных из /api/beers
+│   ├── beer/add/page.tsx   # Форма добавления пива (только для авторизованных)
 │   ├── beeradm/page.tsx    # Закрытая админка (пароль + сессия)
 │   ├── login/page.tsx      # Вход пользователей через Telegram widget
 │   ├── auth/telegram/callback/route.ts # Callback Telegram Login
 │   ├── globals.css         # Tailwind + shadcn theme
 │   ├── api/
-│   │   ├── beers/route.ts  # GET — отдаёт data/beers.json
+│   │   ├── beers/route.ts  # GET — список пива, POST — добавить пиво (auth)
 │   │   ├── sync/route.ts   # POST — запускает scripts/sync.ts (npx tsx)
 │   │   ├── auth/me/route.ts # GET — текущий пользователь
 │   │   ├── auth/logout/route.ts # POST — logout пользователя
@@ -53,7 +54,8 @@ beer-catalog/
 │   └── data/
 │       └── images/[...path]/route.ts  # Отдаёт картинки, ?w=N&q=N → sharp resize → webp thumb
 ├── components/
-│   ├── header.tsx          # Шапка: лого + кнопка входа (disabled)
+│   ├── header.tsx          # Шапка: лого + login/logout пользователя
+│   ├── add-beer-form.tsx   # Клиентская форма добавления пива
 │   ├── hero.tsx            # Hero-блок: заголовок + анимированная кнопка "Добавить пиво"
 │   ├── filters.tsx         # Фильтры: сорта, страны (с флагами + кнопка "Все"), рейтинг (звёзды), цена (слайдер)
 │   ├── beer-card.tsx       # Карточка пива: квадратное превью, название, страна, рейтинг, цена
@@ -183,7 +185,7 @@ Sync скачивает все записи из NocoDB, сохраняет `dat
 - [ ] **Админка (beeradm)** — расширить до полноценной панели (роли, granular permissions, IP allowlist)
 - [ ] **Postgres + Prisma** — миграция данных из JSON в БД, комментарии, рейтинги от пользователей
 - [x] **Страница пива** — детальная карточка с полным описанием, traits, комментариями
-- [ ] **Добавление пива** — форма (после авторизации)
+- [x] **Добавление пива** — базовая форма (только для авторизованных)
 - [x] **Базовая админка `/beeradm`** — вход по паролю + защищённый запуск Sync
 - [x] **История sync + audit log в админке**
 - [x] **Кнопка Sync в UI** — только в админке
