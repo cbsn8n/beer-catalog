@@ -46,6 +46,7 @@ export interface ModerationNewBeerPayload {
   price: number | null;
   rating: number | null;
   comment: string | null;
+  imageLocal: string | null;
   imageRemote: string | null;
   traits: Beer["traits"];
 }
@@ -55,6 +56,7 @@ export interface ModerationBeerUpdatePayload {
   beerId: number;
   rating: number | null;
   comment: string | null;
+  imageLocal: string | null;
   imageRemote: string | null;
 }
 
@@ -222,9 +224,13 @@ function applyNewBeer(payload: ModerationNewBeerPayload) {
   const item: Beer = {
     id: nextId,
     name: payload.name,
-    image: null,
+    image: payload.imageLocal,
     imageRemote: payload.imageRemote,
-    images: payload.imageRemote ? [{ local: null, remote: payload.imageRemote }] : [],
+    images: payload.imageLocal
+      ? [{ local: payload.imageLocal, remote: payload.imageRemote }]
+      : payload.imageRemote
+        ? [{ local: null, remote: payload.imageRemote }]
+        : [],
     type: payload.type,
     sort: payload.sort,
     filtration: payload.filtration,
@@ -266,12 +272,25 @@ function applyBeerUpdate(payload: ModerationBeerUpdatePayload, user: ModerationS
     beer.comment = beer.comment ? `${beer.comment}\n\n${block}` : block;
   }
 
-  if (payload.imageRemote) {
+  if (payload.imageRemote || payload.imageLocal) {
     const images = Array.isArray(beer.images) ? [...beer.images] : [];
-    const exists = images.some((img) => img.remote === payload.imageRemote || img.local === payload.imageRemote);
-    if (!exists) images.push({ local: null, remote: payload.imageRemote });
+
+    const exists = images.some(
+      (img) =>
+        (payload.imageRemote && img.remote === payload.imageRemote) ||
+        (payload.imageLocal && img.local === payload.imageLocal)
+    );
+
+    if (!exists) {
+      images.push({
+        local: payload.imageLocal,
+        remote: payload.imageRemote,
+      });
+    }
+
     beer.images = images;
-    if (!beer.imageRemote) beer.imageRemote = payload.imageRemote;
+    if (payload.imageLocal && !beer.image) beer.image = payload.imageLocal;
+    if (payload.imageRemote && !beer.imageRemote) beer.imageRemote = payload.imageRemote;
   }
 
   beers[idx] = beer;

@@ -27,13 +27,16 @@ function formatDuration(ms: number | null | undefined) {
 
 function renderSubmissionSummary(item: ModerationSubmission) {
   if (item.payload.kind === "new-beer") {
-    return `Новое пиво: ${item.payload.name}`;
+    const parts = [`Новое пиво: ${item.payload.name}`];
+    if (item.payload.rating != null) parts.push(`оценка ${item.payload.rating}`);
+    if (item.payload.imageLocal || item.payload.imageRemote) parts.push("фото");
+    return parts.join(" • ");
   }
 
   const parts: string[] = [`Обновление карточки #${item.payload.beerId}`];
   if (item.payload.rating != null) parts.push(`оценка ${item.payload.rating}`);
   if (item.payload.comment) parts.push("комментарий");
-  if (item.payload.imageRemote) parts.push("фото");
+  if (item.payload.imageLocal || item.payload.imageRemote) parts.push("фото");
   return parts.join(" • ");
 }
 

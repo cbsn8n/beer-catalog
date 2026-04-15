@@ -4,18 +4,19 @@ import { FormEvent, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StarRatingInput } from "@/components/star-rating-input";
 
 export function BeerContributionForm({ beerId }: { beerId: number }) {
-  const [rating, setRating] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
-  const [imageRemote, setImageRemote] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
-    return !loading && (rating.trim().length > 0 || comment.trim().length > 0 || imageRemote.trim().length > 0);
-  }, [rating, comment, imageRemote, loading]);
+    return !loading && (rating != null || comment.trim().length > 0 || Boolean(imageFile));
+  }, [rating, comment, imageFile, loading]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -26,18 +27,16 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
     setOk(null);
 
     try {
-      const payload = {
-        kind: "beer-update",
-        beerId,
-        rating: rating.trim() ? Number(rating) : null,
-        comment: comment.trim(),
-        imageRemote: imageRemote.trim(),
-      };
+      const formData = new FormData();
+      formData.set("kind", "beer-update");
+      formData.set("beerId", String(beerId));
+      if (rating != null) formData.set("rating", String(rating));
+      if (comment.trim()) formData.set("comment", comment.trim());
+      if (imageFile) formData.set("imageFile", imageFile);
 
       const res = await fetch("/api/moderation/submissions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = await res.json().catch(() => null);
@@ -45,9 +44,9 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
 
-      setRating("");
+      setRating(null);
       setComment("");
-      setImageRemote("");
+      setImageFile(null);
       setOk("Изменения отправлены на модерацию.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка отправки");
@@ -58,29 +57,16 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Оценка (1-10)</label>
-          <Input
-            type="number"
-            min={1}
-            max={10}
-            step={1}
-            value={rating}
-            onChange={(e) => setRating(e.target.value)}
-            placeholder="8"
-            className="h-10"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">URL фото</label>
-          <Input
-            value={imageRemote}
-            onChange={(e) => setImageRemote(e.target.value)}
-            placeholder="https://..."
-            className="h-10"
-          />
-        </div>
+      <StarRatingInput value={rating} onChange={setRating} label="Моя оценка" max={10} />
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Добавить фото</label>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+          className="h-10"
+        />
       </div>
 
       <div>
@@ -107,4 +93,3 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
     </form>
   );
 }
-
