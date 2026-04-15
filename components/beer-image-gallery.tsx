@@ -31,23 +31,17 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
 
     return result;
   }, [images]);
-  const [activeMain, setActiveMain] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const [rotateBusy, setRotateBusy] = useState<"cw" | "ccw" | null>(null);
   const [rotateMsg, setRotateMsg] = useState<string | null>(null);
   const [rotateErr, setRotateErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (normalized.length === 0) {
-      setActiveMain(null);
-      return;
+    if (active >= normalized.length) {
+      setActive(0);
     }
-
-    const exists = activeMain && normalized.some((item) => item.main === activeMain);
-    if (!exists) {
-      setActiveMain(normalized[0].main);
-    }
-  }, [normalized, activeMain]);
+  }, [normalized.length, active]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,15 +62,13 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
     );
   }
 
-  const activeIndex = Math.max(0, normalized.findIndex((item) => item.main === activeMain));
+  const activeIndex = Math.max(0, Math.min(active, normalized.length - 1));
   const current = normalized[activeIndex] || normalized[0];
   const prev = () => {
-    const idx = (activeIndex - 1 + normalized.length) % normalized.length;
-    setActiveMain(normalized[idx]?.main || normalized[0].main);
+    setActive((v) => (v - 1 + normalized.length) % normalized.length);
   };
   const next = () => {
-    const idx = (activeIndex + 1) % normalized.length;
-    setActiveMain(normalized[idx]?.main || normalized[0].main);
+    setActive((v) => (v + 1) % normalized.length);
   };
 
   const rotateCurrent = async (degrees: 90 | -90) => {
@@ -133,7 +125,7 @@ export function BeerImageGallery({ images, alt, isAdmin = false }: { images: Bee
             <button
               key={item.main}
               type="button"
-              onClick={() => setActiveMain(item.main)}
+              onClick={() => setActive(idx)}
               className={`overflow-hidden rounded-2xl border bg-white ${idx === activeIndex ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
             >
               <div className="aspect-square overflow-hidden bg-white">
