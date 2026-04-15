@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Beer, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminSyncButton } from "@/components/admin-sync-button";
 
 export function Header() {
   return (
@@ -13,6 +14,7 @@ export function Header() {
           <span className="text-xl font-bold tracking-tight">Beervana</span>
         </Link>
         <div className="flex items-center gap-2">
+          <AdminSyncButton />
           <Button variant="outline" size="sm" disabled className="gap-2">
             <LogIn className="h-4 w-4" />
             <span className="hidden sm:inline">Войти</span>
