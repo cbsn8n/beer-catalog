@@ -12,8 +12,60 @@ const JSON_PATH = path.join(DATA_DIR, "beers.json");
 const PAGE_SIZE = 200;
 const CONCURRENT_DL = 10;
 
+type BeerLike = {
+  id: number;
+  name: string;
+  image: string | null;
+  imageRemote?: string | null;
+  images?: Array<{ local: string | null; remote: string | null; version?: number | null }>;
+  type: string | null;
+  sort: string | null;
+  filtration: string | null;
+  country: string | null;
+  price: number | null;
+  traits: {
+    socks: boolean;
+    bitter: boolean;
+    sour: boolean;
+    fruity: boolean;
+    smoked: boolean;
+    watery: boolean;
+    spirity: boolean;
+  };
+  rating: number | null;
+  comment: string | null;
+  imageVersion?: number | null;
+};
+
+type BuiltNocoBeer = {
+  beer: BeerLike;
+  imageTasks: Array<{ url: string; dest: string }>;
+};
+
 function toBool(v: unknown): boolean {
   return v === true || v === 1 || v === "true";
+}
+
+function normalizeName(v: unknown) {
+  return typeof v === "string" ? v.trim().toLowerCase() : "";
+}
+
+function hasAnyImages(beer: Partial<BeerLike> | null | undefined) {
+  if (!beer) return false;
+  if (beer.image || beer.imageRemote) return true;
+  if (Array.isArray(beer.images)) {
+    return beer.images.some((img) => Boolean(img?.local || img?.remote));
+  }
+  return false;
+}
+
+function readCurrentBeers(): BeerLike[] {
+  if (!fs.existsSync(JSON_PATH)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(JSON_PATH, "utf-8")) as BeerLike[];
+  } catch {
+    return [];
+  }
 }
 
 function downloadFile(url: string, dest: string): Promise<void> {
@@ -30,14 +82,28 @@ function downloadFile(url: string, dest: string): Promise<void> {
       }
       if (response.statusCode !== 200) {
         file.close();
-        try { fs.unlinkSync(dest); } catch {}
+        try {
+          fs.unlinkSync(dest);
+        } catch {}
         return reject(new Error(`HTTP ${response.statusCode}`));
       }
       response.pipe(file);
-      file.on("finish", () => { file.close(); resolve(); });
+      file.on("finish", () => {
+        file.close();
+        resolve();
+      });
     });
-    req.on("error", (err) => { file.close(); try { fs.unlinkSync(dest); } catch {} reject(err); });
-    req.on("timeout", () => { req.destroy(); reject(new Error("timeout")); });
+    req.on("error", (err) => {
+      file.close();
+      try {
+        fs.unlinkSync(dest);
+      } catch {}
+      reject(err);
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timeout"));
+    });
   });
 }
 
@@ -67,6 +133,123 @@ async function fetchPage(apiUrl: string, apiKey: string, tableId: string, offset
   if (!res.ok) throw new Error(`NocoDB ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return { list: data.list as NocoBeer[], totalRows: (data.pageInfo?.totalRows ?? 0) as number };
+}
+
+function buildNocoBeer(rec: NocoBeer, apiUrl: string): BuiltNocoBeer {
+  let imagePath: string | null = null;
+  let imageRemote: string | null = null;
+  const images: { local: string | null; remote: string | null }[] = [];
+  const imageTasks: Array<{ url: string; dest: string }> = [];
+
+  if (rec.Фото && rec.Фото.length > 0) {
+    rec.Фото.forEach((photo, idx) => {
+      const ext = photo.mimetype?.includes("png") ? "png" : "jpg";
+      const localName = idx === 0 ? `${rec.Id}.${ext}` : `${rec.Id}-${idx + 1}.${ext}`;
+      const localDest = path.join(IMAGES_DIR, localName);
+      const localUrl = `/data/images/${localName}`;
+      const remoteUrl = `${apiUrl}/${photo.signedPath}`;
+
+      images.push({ local: localUrl, remote: remoteUrl });
+      if (idx === 0) {
+        imagePath = localUrl;
+        imageRemote = remoteUrl;
+      }
+      imageTasks.push({ url: remoteUrl, dest: localDest });
+    });
+  }
+
+  return {
+    beer: {
+      id: rec.Id,
+      name: rec.Название || "Без названия",
+      image: imagePath,
+      imageRemote,
+      images,
+      type: rec.Тип || null,
+      sort: rec.Сорт || null,
+      filtration: rec.Фильтрация || null,
+      country: rec.Страна || null,
+      price: rec.Цена ?? null,
+      traits: {
+        socks: toBool(rec.Носки),
+        bitter: toBool(rec.Горчит),
+        sour: toBool(rec.Кислит),
+        fruity: toBool(rec.Фруктовое),
+        smoked: toBool(rec.Копченое),
+        watery: toBool(rec.Водянистое),
+        spirity: toBool(rec.Спиртовое),
+      },
+      rating: rec.Оценка ?? null,
+      comment: rec.Комментарий || null,
+    },
+    imageTasks,
+  };
+}
+
+function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
+  const byId = new Map<number, { beer: BeerLike; idx: number }>();
+  const byName = new Map<string, { beer: BeerLike; idx: number }>();
+
+  existing.forEach((beer, idx) => {
+    byId.set(beer.id, { beer, idx });
+    const n = normalizeName(beer.name);
+    if (n && !byName.has(n)) byName.set(n, { beer, idx });
+  });
+
+  const matchedIdx = new Set<number>();
+  const merged: BeerLike[] = [];
+  const imageTasks: Array<{ url: string; dest: string }> = [];
+
+  for (const incoming of incomingBuilt) {
+    const incBeer = incoming.beer;
+    const byIdHit = byId.get(incBeer.id);
+    const byNameHit = byName.get(normalizeName(incBeer.name));
+    const hit = byIdHit || byNameHit;
+
+    if (!hit) {
+      merged.push(incBeer);
+      imageTasks.push(...incoming.imageTasks);
+      continue;
+    }
+
+    matchedIdx.add(hit.idx);
+    const prev = hit.beer;
+    const keepImages = hasAnyImages(prev);
+
+    const next: BeerLike = {
+      ...incBeer,
+      // Keep existing enrichment from site if present.
+      type: prev.type ?? incBeer.type,
+      sort: prev.sort ?? incBeer.sort,
+      filtration: prev.filtration ?? incBeer.filtration,
+      country: prev.country ?? incBeer.country,
+      price: prev.price ?? incBeer.price,
+      traits: prev.traits ?? incBeer.traits,
+      rating: prev.rating ?? incBeer.rating,
+      comment: prev.comment ?? incBeer.comment,
+      imageVersion: prev.imageVersion ?? incBeer.imageVersion,
+    };
+
+    if (keepImages) {
+      next.image = prev.image ?? null;
+      next.imageRemote = prev.imageRemote ?? null;
+      next.images = Array.isArray(prev.images) ? prev.images : [];
+      next.imageVersion = prev.imageVersion ?? null;
+    } else {
+      imageTasks.push(...incoming.imageTasks);
+    }
+
+    merged.push(next);
+  }
+
+  // Keep local-only beers (not present in NocoDB) untouched.
+  for (let i = 0; i < existing.length; i += 1) {
+    if (!matchedIdx.has(i)) {
+      merged.push(existing[i]);
+    }
+  }
+
+  return { beers: merged, imageTasks };
 }
 
 export async function POST(req: NextRequest) {
@@ -107,62 +290,24 @@ export async function POST(req: NextRequest) {
       offset += PAGE_SIZE;
     } while (allRecords.length < totalRows);
 
-    const beers: any[] = [];
-    const imageTasks: Array<{ url: string; dest: string }> = [];
-
-    for (const rec of allRecords) {
-      let imagePath: string | null = null;
-      let imageRemote: string | null = null;
-      const images: { local: string | null; remote: string | null }[] = [];
-
-      if (rec.Фото && rec.Фото.length > 0) {
-        rec.Фото.forEach((photo, idx) => {
-          const ext = photo.mimetype?.includes("png") ? "png" : "jpg";
-          const localName = idx === 0 ? `${rec.Id}.${ext}` : `${rec.Id}-${idx + 1}.${ext}`;
-          const localDest = path.join(IMAGES_DIR, localName);
-          const localUrl = `/data/images/${localName}`;
-          const remoteUrl = `${API_URL}/${photo.signedPath}`;
-
-          images.push({ local: localUrl, remote: remoteUrl });
-          if (idx === 0) { imagePath = localUrl; imageRemote = remoteUrl; }
-          imageTasks.push({ url: remoteUrl, dest: localDest });
-        });
-      }
-
-      beers.push({
-        id: rec.Id,
-        name: rec.Название || "Без названия",
-        image: imagePath,
-        imageRemote,
-        images,
-        type: rec.Тип || null,
-        sort: rec.Сорт || null,
-        filtration: rec.Фильтрация || null,
-        country: rec.Страна || null,
-        price: rec.Цена ?? null,
-        traits: {
-          socks: toBool(rec.Носки),
-          bitter: toBool(rec.Горчит),
-          sour: toBool(rec.Кислит),
-          fruity: toBool(rec.Фруктовое),
-          smoked: toBool(rec.Копченое),
-          watery: toBool(rec.Водянистое),
-          spirity: toBool(rec.Спиртовое),
-        },
-        rating: rec.Оценка ?? null,
-        comment: rec.Комментарий || null,
-      });
-    }
+    const incomingBuilt = allRecords.map((rec) => buildNocoBeer(rec, API_URL));
+    const existing = readCurrentBeers();
+    const { beers, imageTasks } = mergeBeers(existing, incomingBuilt);
 
     fs.writeFileSync(JSON_PATH, JSON.stringify(beers, null, 2));
 
     // download images
-    let downloaded = 0, skipped = 0, failed = 0;
+    let downloaded = 0,
+      skipped = 0,
+      failed = 0;
     for (let i = 0; i < imageTasks.length; i += CONCURRENT_DL) {
       const batch = imageTasks.slice(i, i + CONCURRENT_DL);
       const results = await Promise.allSettled(
         batch.map(async ({ url, dest }) => {
-          if (fs.existsSync(dest)) { skipped++; return; }
+          if (fs.existsSync(dest)) {
+            skipped++;
+            return;
+          }
           await downloadFile(url, dest);
           downloaded++;
         })
@@ -192,6 +337,7 @@ export async function POST(req: NextRequest) {
       skipped,
       failed,
       durationMs,
+      mergedWithLocal: true,
     });
 
     return NextResponse.json({
@@ -199,6 +345,7 @@ export async function POST(req: NextRequest) {
       beers: beers.length,
       durationMs,
       images: { downloaded, skipped, failed },
+      mergedWithLocal: true,
     });
   } catch (err: any) {
     const finishedMs = Date.now();
