@@ -44,12 +44,14 @@ beer-catalog/
 │   ├── auth/telegram/callback/route.ts # Callback Telegram Login
 │   ├── globals.css         # Tailwind + shadcn theme
 │   ├── api/
-│   │   ├── beers/route.ts  # GET — список пива, POST — добавить пиво (auth)
+│   │   ├── beers/route.ts  # GET — список пива
+│   │   ├── moderation/submissions/route.ts # POST — заявка пользователя на модерацию
 │   │   ├── sync/route.ts   # POST — запускает scripts/sync.ts (npx tsx)
 │   │   ├── auth/me/route.ts # GET — текущий пользователь
 │   │   ├── auth/logout/route.ts # POST — logout пользователя
 │   │   ├── beeradm/login/route.ts  # POST — вход в админку
 │   │   ├── beeradm/logout/route.ts # POST — выход из админки
+│   │   ├── beeradm/moderation/route.ts # GET/POST — очередь модерации
 │   │   └── beer-image/route.ts # (legacy) SVG placeholder генератор
 │   └── data/
 │       └── images/[...path]/route.ts  # Отдаёт картинки, ?w=N&q=N → sharp resize → webp thumb
@@ -185,7 +187,8 @@ Sync скачивает все записи из NocoDB, сохраняет `dat
 - [ ] **Админка (beeradm)** — расширить до полноценной панели (роли, granular permissions, IP allowlist)
 - [ ] **Postgres + Prisma** — миграция данных из JSON в БД, комментарии, рейтинги от пользователей
 - [x] **Страница пива** — детальная карточка с полным описанием, traits, комментариями
-- [x] **Добавление пива** — базовая форма (только для авторизованных)
+- [x] **Добавление пива** — через модерацию: поиск дублей + заявка на новое пиво
+- [x] **Изменения существующей карточки** — rating/comment/photo отправляются на модерацию
 - [x] **Базовая админка `/beeradm`** — вход по паролю + защищённый запуск Sync
 - [x] **История sync + audit log в админке**
 - [x] **Кнопка Sync в UI** — только в админке

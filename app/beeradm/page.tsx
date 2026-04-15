@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AdminSyncButton } from "@/components/admin-sync-button";
 import { BeeradmLoginForm } from "@/components/beeradm-login-form";
 import { BeeradmLogoutButton } from "@/components/beeradm-logout-button";
+import { BeeradmModerationActions } from "@/components/beeradm-moderation-actions";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
-import { getBeeradmOverview } from "@/lib/beeradm";
+import { getBeeradmOverview, type ModerationSubmission } from "@/lib/beeradm";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,18 @@ function formatDuration(ms: number | null | undefined) {
   if (!ms || ms <= 0) return "—";
   if (ms < 1000) return `${ms} ms`;
   return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function renderSubmissionSummary(item: ModerationSubmission) {
+  if (item.payload.kind === "new-beer") {
+    return `Новое пиво: ${item.payload.name}`;
+  }
+
+  const parts: string[] = [`Обновление карточки #${item.payload.beerId}`];
+  if (item.payload.rating != null) parts.push(`оценка ${item.payload.rating}`);
+  if (item.payload.comment) parts.push("комментарий");
+  if (item.payload.imageRemote) parts.push("фото");
+  return parts.join(" • ");
 }
 
 export default async function BeeradmPage() {
@@ -75,6 +88,48 @@ export default async function BeeradmPage() {
                       </div>
                       <div className="mt-1 text-xs text-gray-600">{formatDate(overview?.lastSync?.finishedAt)}</div>
                     </div>
+                    <div className="rounded-xl border bg-white p-3 sm:col-span-2 lg:col-span-4">
+                      <div className="text-xs uppercase tracking-wide text-gray-500">Заявок на модерацию</div>
+                      <div className="mt-1 text-2xl font-bold text-gray-900">{overview?.moderationPendingCount ?? 0}</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Модерация заявок</h3>
+
+                    {overview?.moderationPending?.length ? (
+                      <div className="overflow-x-auto rounded-xl border">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Время</th>
+                              <th className="px-3 py-2 text-left">Пользователь</th>
+                              <th className="px-3 py-2 text-left">Заявка</th>
+                              <th className="px-3 py-2 text-right">Действие</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {overview.moderationPending.map((item) => (
+                              <tr key={item.id} className="border-t bg-white align-top">
+                                <td className="px-3 py-2 text-gray-700">{formatDate(item.createdAt)}</td>
+                                <td className="px-3 py-2 text-gray-700">
+                                  {item.user.first_name}
+                                  {item.user.username ? ` (@${item.user.username})` : ""}
+                                </td>
+                                <td className="px-3 py-2 text-gray-700">{renderSubmissionSummary(item)}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <BeeradmModerationActions submissionId={item.id} />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
+                        Новых заявок на модерацию нет.
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

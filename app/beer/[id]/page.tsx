@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { ArrowLeft, Star, Tag } from "lucide-react";
 import { getFlagSrc } from "@/lib/country-meta";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
+import { BeerContributionForm } from "@/components/beer-contribution-form";
+import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -34,6 +37,9 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const beer = getBeer(Number(id));
   if (!beer) notFound();
+
+  const cookieStore = await cookies();
+  const user = verifyUserSessionToken(cookieStore.get(USER_COOKIE_NAME)?.value);
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
@@ -123,6 +129,20 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                   <p className="leading-7 text-gray-700">{beer.comment}</p>
                 </div>
               )}
+
+              <div className="mt-8 rounded-2xl border bg-white p-5 shadow-sm">
+                <h2 className="mb-2 text-lg font-semibold">Добавить отзыв / фото / оценку</h2>
+                {user ? (
+                  <BeerContributionForm beerId={beer.id} />
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600">Чтобы отправлять изменения, нужно войти через Telegram.</p>
+                    <Link href="/login">
+                      <Button>Войти</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

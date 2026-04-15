@@ -31,7 +31,7 @@ export default async function AddBeerPage() {
             <CardHeader>
               <CardTitle className="text-2xl font-bold text-gray-900">Добавить пиво</CardTitle>
               <CardDescription>
-                Новая запись попадёт в каталог и будет доступна всем пользователям.
+                Новые записи и изменения по существующим карточкам проходят модерацию.
               </CardDescription>
             </CardHeader>
 
