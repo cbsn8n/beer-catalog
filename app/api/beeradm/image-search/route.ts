@@ -16,6 +16,23 @@ function toAbsoluteImageUrl(value: string, req: NextRequest) {
   return `${base}${value.startsWith("/") ? "" : "/"}${value}`;
 }
 
+function toSerperSafeLensUrl(value: string, req: NextRequest) {
+  const raw = toAbsoluteImageUrl(value, req);
+  const url = new URL(raw);
+
+  if (!/^https?:$/i.test(url.protocol)) {
+    throw new Error("Lens supports only http/https URLs");
+  }
+
+  // Serper Lens can reject transformed/cached image URLs with params.
+  // Use canonical image URL without runtime resize/cache params.
+  url.searchParams.delete("w");
+  url.searchParams.delete("q");
+  url.searchParams.delete("v");
+
+  return url.toString();
+}
+
 function asString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
@@ -74,7 +91,7 @@ async function searchByLens(req: NextRequest, imageUrl: string) {
   if (!apiKey) throw new Error("SERPER_API is not configured");
 
   const url = "https://google.serper.dev/lens";
-  const target = toAbsoluteImageUrl(imageUrl, req);
+  const target = toSerperSafeLensUrl(imageUrl, req);
 
   const res = await fetch(url, {
     method: "POST",
@@ -169,4 +186,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err?.message || "Unknown error" }, { status: 500 });
   }
 }
-

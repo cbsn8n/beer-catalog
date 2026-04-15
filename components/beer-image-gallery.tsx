@@ -125,8 +125,10 @@ export function BeerImageGallery({
     setSearchResults([]);
 
     try {
+      const lensSource = current.local || current.main;
+
       const payload = mode === "lens"
-        ? { mode, imageUrl: current.main }
+        ? { mode, imageUrl: lensSource }
         : { mode, query: alt };
 
       const res = await fetch("/api/beeradm/image-search", {
