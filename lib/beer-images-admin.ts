@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import type { Beer } from "@/lib/types";
+import { getImageVersion, setImageVersion } from "@/lib/image-versions";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -58,17 +59,6 @@ function localUrlToAbsPath(localUrl: string) {
   return absPath;
 }
 
-function getVersion(localUrl: string | null | undefined) {
-  if (!localUrl) return null;
-  const abs = localUrlToAbsPath(localUrl);
-  if (!abs || !fs.existsSync(abs)) return null;
-  try {
-    return Math.floor(fs.statSync(abs).mtimeMs);
-  } catch {
-    return null;
-  }
-}
-
 async function isSuspiciousLocal(localUrl: string) {
   const abs = localUrlToAbsPath(localUrl);
   if (!abs || !fs.existsSync(abs)) return false;
@@ -120,7 +110,7 @@ export async function listBeersWithLocalImages(): Promise<BeerImageAdminSummary[
         country: beer.country,
         sort: beer.sort,
         preview: localImages[0] || beer.image || beer.imageRemote || null,
-        previewVersion: getVersion(localImages[0] || beer.image || null),
+        previewVersion: getImageVersion(localImages[0] || beer.image || null),
         localImages,
         suspicious,
       };
@@ -139,6 +129,7 @@ export async function rotateLocalImage(localUrl: string, degrees: 90 | -90 = 90)
   const tmpPath = `${absPath}.tmp-${Date.now()}`;
   await sharp(absPath).rotate(degrees).toFile(tmpPath);
   fs.renameSync(tmpPath, absPath);
+  setImageVersion(localUrl, Date.now());
   invalidateThumbCacheForLocal(localUrl);
 }
 

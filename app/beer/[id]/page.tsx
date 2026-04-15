@@ -12,35 +12,17 @@ import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import { BeerContributionForm } from "@/components/beer-contribution-form";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
+import { getImageVersion } from "@/lib/image-versions";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const JSON_PATH = path.join(DATA_DIR, "beers.json");
-const IMAGES_DIR = path.join(DATA_DIR, "images");
 
 function getBeer(id: number): Beer | null {
   if (!fs.existsSync(JSON_PATH)) return null;
   const beers = JSON.parse(fs.readFileSync(JSON_PATH, "utf-8")) as Beer[];
   return beers.find((b) => b.id === id) || null;
-}
-
-function getLocalImageVersion(localUrl: string | null | undefined) {
-  if (!localUrl) return null;
-
-  const [pure] = localUrl.split("?");
-  if (!pure.startsWith("/data/images/")) return null;
-
-  const rel = pure.replace(/^\/data\/images\//, "");
-  const abs = path.join(IMAGES_DIR, rel);
-  if (!abs.startsWith(IMAGES_DIR)) return null;
-
-  try {
-    const stat = fs.statSync(abs);
-    return Math.floor(stat.mtimeMs);
-  } catch {
-    return null;
-  }
 }
 
 const TRAITS: Record<keyof Beer["traits"], string> = {
@@ -64,12 +46,12 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
-  const imageVersion = getLocalImageVersion(beer.image);
+  const imageVersion = getImageVersion(beer.image);
 
   const images = beer.images?.length
     ? beer.images.map((img) => ({
         local: img.local,
-        version: img.local ? getLocalImageVersion(img.local) : null,
+        version: img.local ? getImageVersion(img.local) : null,
         remote: img.remote ?? null,
       }))
     : beer.image || beer.imageRemote

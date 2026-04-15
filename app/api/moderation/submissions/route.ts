@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { addAuditEntry, addModerationSubmission, beerExistsById, isBeerNameExists, type ModerationPayload } from "@/lib/beeradm";
+import { setImageVersion } from "@/lib/image-versions";
 import { getUserFromRequest } from "@/lib/user-auth";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -58,6 +59,7 @@ async function saveImageUpload(file: File) {
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
   fs.writeFileSync(absPath, buffer);
+  setImageVersion(`/data/images/${relPath}`, Date.now());
 
   return `/data/images/${relPath}`;
 }
