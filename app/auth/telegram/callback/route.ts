@@ -2,6 +2,27 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE_NAME, createUserSessionToken, getUserCookieOptions, type UserSession } from "@/lib/user-auth";
 
+function getPublicBaseUrl(req: NextRequest) {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl && /^https?:\/\//.test(envUrl)) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  if (forwardedHost) {
+    const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  const url = new URL(req.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+function toPublicUrl(req: NextRequest, path: string) {
+  const base = getPublicBaseUrl(req);
+  return new URL(path, `${base}/`);
+}
+
 function verifyTelegramAuth(params: URLSearchParams, botToken: string) {
   const hash = params.get("hash");
   if (!hash) return { ok: false, reason: "missing-hash" } as const;
@@ -41,7 +62,7 @@ function verifyTelegramAuth(params: URLSearchParams, botToken: string) {
 export async function GET(req: NextRequest) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
-    const failUrl = new URL("/login?error=telegram-not-configured", req.url);
+    const failUrl = toPublicUrl(req, "/login?error=telegram-not-configured");
     return NextResponse.redirect(failUrl);
   }
 
@@ -49,14 +70,14 @@ export async function GET(req: NextRequest) {
   const result = verifyTelegramAuth(params, botToken);
 
   if (!result.ok) {
-    const failUrl = new URL(`/login?error=${encodeURIComponent(result.reason)}`, req.url);
+    const failUrl = toPublicUrl(req, `/login?error=${encodeURIComponent(result.reason)}`);
     return NextResponse.redirect(failUrl);
   }
 
   const id = Number(params.get("id"));
   const firstName = params.get("first_name") || "User";
   if (!Number.isFinite(id)) {
-    const failUrl = new URL("/login?error=invalid-user", req.url);
+    const failUrl = toPublicUrl(req, "/login?error=invalid-user");
     return NextResponse.redirect(failUrl);
   }
 
@@ -70,8 +91,7 @@ export async function GET(req: NextRequest) {
   };
 
   const token = createUserSessionToken(user);
-  const res = NextResponse.redirect(new URL("/", req.url));
+  const res = NextResponse.redirect(toPublicUrl(req, "/"));
   res.cookies.set(USER_COOKIE_NAME, token, getUserCookieOptions());
   return res;
 }
-
