@@ -11,6 +11,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import { BeerContributionForm } from "@/components/beer-contribution-form";
+import { BeerAdminRotateControls } from "@/components/beer-admin-rotate-controls";
+import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
 
@@ -40,6 +42,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
   const cookieStore = await cookies();
   const user = verifyUserSessionToken(cookieStore.get(USER_COOKIE_NAME)?.value);
+  const isAdmin = verifyAdminSessionToken(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
 
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
   const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
@@ -67,6 +70,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
               <BeerImageGallery images={images} alt={beer.name} />
+              {isAdmin && <BeerAdminRotateControls beerId={beer.id} />}
             </div>
 
             <div>

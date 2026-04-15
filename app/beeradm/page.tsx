@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminSyncButton } from "@/components/admin-sync-button";
+import { BeeradmImageTools } from "@/components/beeradm-image-tools";
 import { BeeradmLoginForm } from "@/components/beeradm-login-form";
 import { BeeradmLogoutButton } from "@/components/beeradm-logout-button";
 import { BeeradmModerationActions } from "@/components/beeradm-moderation-actions";
@@ -143,6 +144,14 @@ export default async function BeeradmPage() {
                       </p>
                     </div>
                     <AdminSyncButton />
+                  </div>
+
+                  <div className="space-y-2 border-t pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Карточки и фото (админ)</h3>
+                    <p className="text-sm text-gray-600">
+                      Поворот фото по одной карточке и массово для выбранных карточек.
+                    </p>
+                    <BeeradmImageTools />
                   </div>
 
                   <div className="space-y-2 border-t pt-4">
