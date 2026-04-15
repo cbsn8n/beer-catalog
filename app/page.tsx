@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { ArrowDownAZ, ArrowDownUp, ArrowUpDown, Loader2, Star } from "lucide-react";
+import { ArrowDownAZ, ArrowUpDown, Loader2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
@@ -9,6 +9,12 @@ import { Filters } from "@/components/filters";
 import { BeerGrid } from "@/components/beer-grid";
 import { Footer } from "@/components/footer";
 import type { Beer } from "@/lib/types";
+
+const SORT_OPTIONS = [
+  { value: "name", label: "По названию", icon: ArrowDownAZ },
+  { value: "price", label: "По цене", icon: ArrowUpDown },
+  { value: "rating", label: "По рейтингу", icon: Star },
+] as const;
 
 export default function Home() {
   const [beers, setBeers] = useState<Beer[]>([]);
@@ -119,19 +125,44 @@ export default function Home() {
             <BeerGrid
               beers={filtered}
               sortControls={(
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant={sortBy === "name" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("name")}>
-                    <ArrowDownAZ className="h-4 w-4" />
-                    По названию
-                  </Button>
-                  <Button type="button" variant={sortBy === "price" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("price")}>
-                    <ArrowUpDown className="h-4 w-4" />
-                    По цене
-                  </Button>
-                  <Button type="button" variant={sortBy === "rating" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setSortBy("rating")}>
-                    <Star className="h-4 w-4" />
-                    По рейтингу
-                  </Button>
+                <div className="w-full sm:w-auto">
+                  <div className="sm:hidden">
+                    <label htmlFor="beer-sort-mobile" className="mb-2 block text-sm font-medium text-gray-600">
+                      Сортировка
+                    </label>
+                    <select
+                      id="beer-sort-mobile"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                      className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                    >
+                      {SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="hidden items-center gap-2 sm:flex">
+                    {SORT_OPTIONS.map((option) => {
+                      const Icon = option.icon;
+
+                      return (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={sortBy === option.value ? "default" : "outline"}
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setSortBy(option.value)}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {option.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             />

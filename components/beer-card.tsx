@@ -24,7 +24,7 @@ export function BeerCard({ beer, index }: { beer: Beer; index: number }) {
               <img
                 src={`${beer.image}?w=420&q=62`}
                 alt={beer.name}
-                className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
+                className="block h-full w-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
                 onError={(e) => {
                   const remote = beer.imageRemote;

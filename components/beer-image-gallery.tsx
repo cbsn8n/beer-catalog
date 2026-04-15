@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BeerImage } from "@/lib/types";
 
 export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: string }) {
@@ -23,6 +23,17 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [open]);
+
   if (normalized.length === 0) {
     return (
       <div className="flex aspect-square items-center justify-center rounded-3xl border bg-amber-50 text-amber-300 shadow-sm">
@@ -42,13 +53,13 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
         className="group block w-full overflow-hidden rounded-3xl border bg-white shadow-sm"
         onClick={() => setOpen(true)}
       >
-        <div className="relative aspect-square overflow-hidden bg-white">
+        <div className="relative aspect-[4/5] overflow-hidden bg-white sm:aspect-square">
           <div className="flex h-full w-full items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={current.main}
               alt={alt}
-              className="block h-full w-auto max-w-none object-contain transition-transform duration-300 group-hover:scale-105"
+              className="block h-full w-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
                 const fallback = images[active]?.remote;
                 if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
@@ -86,37 +97,39 @@ export function BeerImageGallery({ images, alt }: { images: BeerImage[]; alt: st
 
       {open && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] overflow-hidden bg-black/80 p-4 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
-          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="absolute right-2 top-2 z-10 rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-black shadow"
-              onClick={() => setOpen(false)}
-            >
-              Закрыть
-            </button>
-            {normalized.length > 1 && (
-              <>
-                <button type="button" onClick={prev} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow">
-                  <ChevronLeft className="h-5 w-5 text-black" />
-                </button>
-                <button type="button" onClick={next} className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow">
-                  <ChevronRight className="h-5 w-5 text-black" />
-                </button>
-              </>
-            )}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={current.main}
-              alt={alt}
-              className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-              onError={(e) => {
-                const fallback = images[active]?.remote;
-                if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
-              }}
-            />
+          <div className="flex h-full w-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full max-w-screen-lg">
+              <button
+                type="button"
+                className="absolute right-2 top-2 z-10 rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-black shadow"
+                onClick={() => setOpen(false)}
+              >
+                Закрыть
+              </button>
+              {normalized.length > 1 && (
+                <>
+                  <button type="button" onClick={prev} className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow sm:left-3">
+                    <ChevronLeft className="h-5 w-5 text-black" />
+                  </button>
+                  <button type="button" onClick={next} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow sm:right-3">
+                    <ChevronRight className="h-5 w-5 text-black" />
+                  </button>
+                </>
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={current.main}
+                alt={alt}
+                className="mx-auto block h-auto max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
+                onError={(e) => {
+                  const fallback = images[active]?.remote;
+                  if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

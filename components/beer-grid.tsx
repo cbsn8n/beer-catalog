@@ -52,7 +52,7 @@ export function BeerGrid({ beers, sortControls }: BeerGridProps) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">Найдено: {beers.length}</p>
         {sortControls}
       </div>
