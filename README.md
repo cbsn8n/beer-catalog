@@ -38,11 +38,14 @@ beer-catalog/
 ├── app/
 │   ├── layout.tsx          # Root layout, Geist font, meta
 │   ├── page.tsx            # Главная: состояние фильтров, загрузка данных из /api/beers
+│   ├── beeradm/page.tsx    # Закрытая админка (пароль + сессия)
 │   ├── globals.css         # Tailwind + shadcn theme
 │   ├── api/
 │   │   ├── beers/route.ts  # GET — отдаёт data/beers.json
 │   │   ├── sync/route.ts   # POST — запускает scripts/sync.ts (npx tsx)
-│   │   └── beer-image/route.ts  # (legacy) SVG placeholder генератор
+│   │   ├── beeradm/login/route.ts  # POST — вход в админку
+│   │   ├── beeradm/logout/route.ts # POST — выход из админки
+│   │   └── beer-image/route.ts # (legacy) SVG placeholder генератор
 │   └── data/
 │       └── images/[...path]/route.ts  # Отдаёт картинки, ?w=N&q=N → sharp resize → webp thumb
 ├── components/
@@ -131,6 +134,7 @@ interface Beer {
 | `TELEGRAM_BOT_TOKEN` | (secret) | Для авторизации (TODO) |
 | `TELEGRAM_BOT_USERNAME` | (bot username) | Для login widget (TODO) |
 | `JWT_SECRET` | (secret) | Сессии (TODO) |
+| `ADMIN_PANEL_PASSWORD` | (secret) | Пароль входа в `/beeradm` |
 
 ## Sync (синхронизация с NocoDB)
 
@@ -146,6 +150,8 @@ curl -X POST https://vana.beer/api/sync
 ```
 
 Sync скачивает все записи из NocoDB, сохраняет `data/beers.json`, затем качает фото в `data/images/`.
+
+> Доступ к `/api/sync`: либо активная сессия `/beeradm`, либо `SYNC_TRIGGER_SECRET` (для автоматизаций).
 
 ## Превью картинок
 
@@ -168,10 +174,12 @@ Sync скачивает все записи из NocoDB, сохраняет `dat
 
 - [ ] **Telegram авторизация** — login widget, JWT сессии
 - [ ] **Google авторизация** — OAuth
+- [ ] **Админка (beeradm)** — расширить до полноценной панели (роли, аудит действий, дополнительные разделы)
 - [ ] **Postgres + Prisma** — миграция данных из JSON в БД, комментарии, рейтинги от пользователей
 - [x] **Страница пива** — детальная карточка с полным описанием, traits, комментариями
 - [ ] **Добавление пива** — форма (после авторизации)
-- [x] **Кнопка Sync в UI** — для админа
+- [x] **Базовая админка `/beeradm`** — вход по паролю + защищённый запуск Sync
+- [x] **Кнопка Sync в UI** — только в админке
 - [x] **Persistent Storage в Coolify** — чтобы не терять картинки при деплое
 - [x] **Traits в фильтрах** — фильтрация по горчит/кислит/фруктовое и т.д.
 - [x] **Поиск по названию**

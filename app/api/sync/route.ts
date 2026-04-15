@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import https from "https";
 import http from "http";
+import { isAdminRequest } from "@/lib/admin-auth";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -68,10 +69,15 @@ async function fetchPage(apiUrl: string, apiKey: string, tableId: string, offset
 }
 
 export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const isAdmin = isAdminRequest(req);
   const secret = process.env.SYNC_TRIGGER_SECRET;
-  if (secret) {
-    const body = await req.json().catch(() => ({}));
-    if (body.secret !== secret) {
+
+  // Access policy:
+  // - Admin session cookie is always accepted
+  // - SYNC_TRIGGER_SECRET works as service access (webhook/automation)
+  if (!isAdmin) {
+    if (!secret || body.secret !== secret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

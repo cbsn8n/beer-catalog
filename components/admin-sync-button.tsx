@@ -25,28 +25,17 @@ export function AdminSyncButton() {
     setState({ type: "idle" });
 
     try {
-      const request = async (secret?: string) => {
-        const body = secret ? { secret } : {};
-        return fetch("/api/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-      };
-
-      let res = await request();
-
-      if (res.status === 401) {
-        const secret = window.prompt("Введите SYNC_TRIGGER_SECRET:")?.trim();
-        if (!secret) {
-          setState({ type: "error", message: "Синхронизация отменена (нет секрета)." });
-          return;
-        }
-        res = await request(secret);
-      }
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Сессия истекла. Войдите в beeradm заново.");
+        }
         throw new Error(payload?.error || `HTTP ${res.status}`);
       }
 
@@ -81,4 +70,3 @@ export function AdminSyncButton() {
     </div>
   );
 }
-
