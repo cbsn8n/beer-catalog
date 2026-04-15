@@ -114,6 +114,12 @@ export function BeerImageGallery({
     };
   }, [isAdmin, beerId]);
 
+  useEffect(() => {
+    if (generateJob?.status === "succeeded") {
+      setGenerateErr(null);
+    }
+  }, [generateJob?.status]);
+
   if (normalized.length === 0) {
     return (
       <div className="flex aspect-square items-center justify-center rounded-3xl border bg-amber-50 text-amber-300 shadow-sm">

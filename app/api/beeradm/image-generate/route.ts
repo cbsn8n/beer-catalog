@@ -47,12 +47,16 @@ async function startProviderJob(req: NextRequest, input: {
   const apiKey = process.env.GRSAI_API_KEY;
   if (!apiKey) throw new Error("GRSAI_API_KEY is not configured");
 
+  const absoluteImageUrl = toAbsoluteImageUrl(input.sourceImageUrl, req);
+
   const payload = {
     model: input.model,
     prompt: input.prompt,
     size: "1:1",
     variants: 1,
-    image: toAbsoluteImageUrl(input.sourceImageUrl, req),
+    // Some providers expect a single image field, others expect array `urls`.
+    image: absoluteImageUrl,
+    urls: [absoluteImageUrl],
     webhook: input.webhookUrl,
     webhook_url: input.webhookUrl,
     callback_url: input.webhookUrl,
@@ -81,55 +85,87 @@ async function startProviderJob(req: NextRequest, input: {
   let status = "pending";
   let error = "";
 
+  const applyObj = (obj: {
+    id?: string;
+    task_id?: string;
+    status?: string;
+    url?: string;
+    error?: string;
+    failure_reason?: string;
+    results?: Array<{ url?: string }>;
+  }) => {
+    if (obj.id) providerId = obj.id;
+    if (obj.task_id) providerTaskId = obj.task_id;
+    if (obj.url) resultImageUrl = obj.url;
+    if (!resultImageUrl && Array.isArray(obj.results)) {
+      for (const r of obj.results) {
+        if (r?.url) {
+          resultImageUrl = r.url;
+          break;
+        }
+      }
+    }
+
+    const s = (obj.status || "").toLowerCase();
+    if (s === "succeeded" || s === "success" || s === "done") status = "succeeded";
+    else if (s === "failed" || s === "error" || s === "cancelled" || s === "canceled") status = "failed";
+    else status = "pending";
+
+    if (obj.failure_reason || obj.error) error = obj.failure_reason || obj.error || "";
+  };
+
+  const parseLine = (rawLine: string) => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    let jsonText = "";
+    if (line.startsWith("data:")) {
+      jsonText = line.slice(5).trim();
+    } else if (line.startsWith("{")) {
+      jsonText = line;
+    }
+
+    if (!jsonText.startsWith("{")) return;
+
+    try {
+      const obj = JSON.parse(jsonText) as {
+        id?: string;
+        task_id?: string;
+        status?: string;
+        url?: string;
+        error?: string;
+        failure_reason?: string;
+        results?: Array<{ url?: string }>;
+      };
+      applyObj(obj);
+    } catch {
+      // ignore invalid partial line
+    }
+  };
+
   try {
-    for (let i = 0; i < 8; i += 1) {
+    let buffer = "";
+    const deadline = Date.now() + 15000;
+
+    while (Date.now() < deadline) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
-      for (const line of lines) {
-        const text = line.trim();
-        if (!text.startsWith("data:")) continue;
+      buffer += decoder.decode(value, { stream: true });
 
-        const jsonText = text.slice(5).trim();
-        if (!jsonText.startsWith("{")) continue;
-
-        try {
-          const obj = JSON.parse(jsonText) as {
-            id?: string;
-            task_id?: string;
-            status?: string;
-            url?: string;
-            error?: string;
-            failure_reason?: string;
-            results?: Array<{ url?: string }>;
-          };
-
-          if (obj.id) providerId = obj.id;
-          if (obj.task_id) providerTaskId = obj.task_id;
-          if (obj.url) resultImageUrl = obj.url;
-          if (!resultImageUrl && Array.isArray(obj.results)) {
-            for (const r of obj.results) {
-              if (r?.url) {
-                resultImageUrl = r.url;
-                break;
-              }
-            }
-          }
-
-          const s = (obj.status || "").toLowerCase();
-          if (s === "succeeded" || s === "success" || s === "done") status = "succeeded";
-          else if (s === "failed" || s === "error" || s === "cancelled" || s === "canceled") status = "failed";
-          else status = "pending";
-
-          if (obj.failure_reason || obj.error) error = obj.failure_reason || obj.error || "";
-        } catch {
-          // ignore invalid partial chunk
-        }
+      let nlIdx = buffer.indexOf("\n");
+      while (nlIdx >= 0) {
+        const line = buffer.slice(0, nlIdx);
+        buffer = buffer.slice(nlIdx + 1);
+        parseLine(line);
+        nlIdx = buffer.indexOf("\n");
       }
 
-      if (providerId) break;
+      if (providerId || status === "succeeded" || status === "failed") break;
+    }
+
+    if (buffer.trim()) {
+      parseLine(buffer);
     }
   } finally {
     try {
@@ -139,12 +175,8 @@ async function startProviderJob(req: NextRequest, input: {
     }
   }
 
-  if (!providerId) {
-    throw new Error("Provider did not return job id");
-  }
-
   return {
-    providerId,
+    providerId: providerId || undefined,
     providerTaskId: providerTaskId || undefined,
     status: status as "pending" | "succeeded" | "failed",
     resultImageUrl: resultImageUrl || undefined,
