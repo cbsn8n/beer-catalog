@@ -28,6 +28,30 @@ export const metadata: Metadata = {
     "Beervana",
     "vana beer",
   ],
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    url: "https://vana.beer",
+    siteName: "Beervana",
+    title: "Beervana — база пива от Ивана",
+    description:
+      "Каталог пива с фото, рейтингами и отзывами. Фильтры по стране, сорту, цене и вкусовым характеристикам.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Beervana — каталог пива",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Beervana — база пива от Ивана",
+    description:
+      "Каталог пива с фото, рейтингами и отзывами. Фильтры по стране, сорту, цене и вкусовым характеристикам.",
+    images: ["/opengraph-image"],
+  },
   icons: {
     icon: [{ url: "/icons/beer-mug.svg", type: "image/svg+xml" }],
     shortcut: [{ url: "/icons/beer-mug.svg", type: "image/svg+xml" }],
