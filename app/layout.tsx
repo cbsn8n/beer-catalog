@@ -10,6 +10,10 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://vana.beer"),
+  alternates: {
+    canonical: "https://vana.beer",
+  },
   title: "Beervana — база пива от Ивана",
   description:
     "Beervana — каталог пива с рейтингами, отзывами и фото. Удобные фильтры по стране, сорту, цене и вкусовым характеристикам.",
