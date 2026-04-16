@@ -31,9 +31,11 @@ export function BeerCard({
           <div className="absolute left-2 top-2 z-20">
             <Button
               type="button"
-              size="sm"
+              size="icon-sm"
               variant="outline"
-              className="gap-1 bg-white/95"
+              className="bg-white/95"
+              aria-label="Редактировать карточку"
+              title="Редактировать карточку"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -41,7 +43,6 @@ export function BeerCard({
               }}
             >
               <Pencil className="h-3.5 w-3.5" />
-              Редактировать
             </Button>
           </div>
         )}

@@ -11,6 +11,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import { BeerContributionForm } from "@/components/beer-contribution-form";
+import { BeerDetailAdminEdit } from "@/components/beer-detail-admin-edit";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { getImageVersion } from "@/lib/image-versions";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
@@ -58,6 +59,16 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
       ? [{ local: beer.image, version: imageVersion, remote: beer.imageRemote ?? null }]
       : [];
 
+  const beerForAdminEdit: Beer = {
+    ...beer,
+    imageVersion,
+    images: images.map((img) => ({
+      local: img.local,
+      remote: img.remote,
+      version: img.version ?? null,
+    })),
+  };
+
   return (
     <>
       <Header />
@@ -85,6 +96,8 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
               <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
                 {beer.name}
               </h1>
+
+              <BeerDetailAdminEdit beer={beerForAdminEdit} isAdmin={isAdmin} />
 
               <div className="mt-4 flex flex-wrap items-center gap-4 text-gray-600">
                 {beer.country && (
