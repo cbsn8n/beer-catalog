@@ -21,6 +21,8 @@ type TelegramConfig = {
   configured: boolean;
 };
 
+export const OPEN_LOGIN_EVENT = "beervana:open-login";
+
 export function Header() {
   const router = useRouter();
   const [user, setUser] = useState<UserSession | null>(null);
@@ -67,6 +69,16 @@ export function Header() {
     document.addEventListener("keydown", onEsc);
     return () => document.removeEventListener("keydown", onEsc);
   }, [loginOpen]);
+
+  useEffect(() => {
+    const handler = () => {
+      setLoginOpen(true);
+      loadTelegramConfig().catch(() => null);
+    };
+
+    window.addEventListener(OPEN_LOGIN_EVENT, handler as EventListener);
+    return () => window.removeEventListener(OPEN_LOGIN_EVENT, handler as EventListener);
+  }, [telegramConfig, telegramLoading]);
 
   const displayName = useMemo(() => {
     if (!user) return "";

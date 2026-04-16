@@ -36,6 +36,24 @@ const TRAITS: Array<{ key: keyof Beer["traits"]; label: string }> = [
   { key: "socks", label: "Носки" },
 ];
 
+type SelectFieldKey = "country" | "type" | "sort" | "filtration";
+type SelectOptions = Record<SelectFieldKey, string[]>;
+
+const EMPTY_SELECT_OPTIONS: SelectOptions = {
+  country: [],
+  type: [],
+  sort: [],
+  filtration: [],
+};
+
+const CUSTOM_OPTION_VALUE = "__custom__";
+
+function uniqueSorted(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, "ru"));
+}
+
 function toForm(beer: Beer): FormState {
   return {
     name: beer.name || "",
@@ -103,6 +121,13 @@ export function BeerAdminEditDialog({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [selectOptions, setSelectOptions] = useState<SelectOptions>(EMPTY_SELECT_OPTIONS);
+  const [customSelect, setCustomSelect] = useState<Record<SelectFieldKey, boolean>>({
+    country: false,
+    type: false,
+    sort: false,
+    filtration: false,
+  });
   const blobUrlsRef = useRef<string[]>([]);
 
   const revokeAllBlobUrls = () => {
@@ -119,6 +144,8 @@ export function BeerAdminEditDialog({
     }
     if (!beer) return;
 
+    let active = true;
+
     revokeAllBlobUrls();
     setForm(toForm(beer));
     setImages(toImages(beer));
@@ -126,6 +153,44 @@ export function BeerAdminEditDialog({
     setDeleteBusy(false);
     setError(null);
     setOk(null);
+
+    const loadOptions = async () => {
+      const res = await fetch("/api/beers", { cache: "no-store" });
+      const data = await res.json().catch(() => []);
+      const list = Array.isArray(data) ? data : [];
+
+      const nextOptions: SelectOptions = {
+        country: uniqueSorted(list.map((item) => item?.country)),
+        type: uniqueSorted(list.map((item) => item?.type)),
+        sort: uniqueSorted(list.map((item) => item?.sort)),
+        filtration: uniqueSorted(list.map((item) => item?.filtration)),
+      };
+
+      if (!active) return;
+
+      setSelectOptions(nextOptions);
+      setCustomSelect({
+        country: Boolean(beer.country && !nextOptions.country.includes(beer.country)),
+        type: Boolean(beer.type && !nextOptions.type.includes(beer.type)),
+        sort: Boolean(beer.sort && !nextOptions.sort.includes(beer.sort)),
+        filtration: Boolean(beer.filtration && !nextOptions.filtration.includes(beer.filtration)),
+      });
+    };
+
+    loadOptions().catch(() => {
+      if (!active) return;
+      setSelectOptions(EMPTY_SELECT_OPTIONS);
+      setCustomSelect({
+        country: true,
+        type: true,
+        sort: true,
+        filtration: true,
+      });
+    });
+
+    return () => {
+      active = false;
+    };
   }, [beer, open]);
 
   useEffect(() => {
@@ -147,6 +212,53 @@ export function BeerAdminEditDialog({
     if (!form) return false;
     return form.name.trim().length > 0 && !busy && !deleteBusy;
   }, [form, busy, deleteBusy]);
+
+  const renderSelectableField = (key: SelectFieldKey, label: string, placeholder: string) => {
+    if (!form) return null;
+
+    const options = selectOptions[key];
+    const value = form[key] || "";
+    const inOptions = Boolean(value && options.includes(value));
+    const useCustom = customSelect[key] || (Boolean(value) && !inOptions);
+    const selectValue = useCustom ? CUSTOM_OPTION_VALUE : value;
+
+    return (
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+        <select
+          value={selectValue}
+          onChange={(e) => {
+            const next = e.target.value;
+            if (next === CUSTOM_OPTION_VALUE) {
+              setCustomSelect((prev) => ({ ...prev, [key]: true }));
+              return;
+            }
+
+            setCustomSelect((prev) => ({ ...prev, [key]: false }));
+            setForm((prev) => (prev ? { ...prev, [key]: next } : prev));
+          }}
+          className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="">{placeholder}</option>
+          {options.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+          <option value={CUSTOM_OPTION_VALUE}>+ Добавить новое значение…</option>
+        </select>
+
+        {useCustom && (
+          <Input
+            value={value}
+            onChange={(e) => setForm((prev) => (prev ? { ...prev, [key]: e.target.value } : prev))}
+            placeholder="Введите новое значение"
+            className="mt-2"
+          />
+        )}
+      </div>
+    );
+  };
 
   if (!open || !beer || !form) return null;
 
@@ -315,34 +427,10 @@ export function BeerAdminEditDialog({
                 required
               />
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Страна</label>
-              <Input
-                value={form.country}
-                onChange={(e) => setForm((prev) => (prev ? { ...prev, country: e.target.value } : prev))}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Тип</label>
-              <Input
-                value={form.type}
-                onChange={(e) => setForm((prev) => (prev ? { ...prev, type: e.target.value } : prev))}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Сорт</label>
-              <Input
-                value={form.sort}
-                onChange={(e) => setForm((prev) => (prev ? { ...prev, sort: e.target.value } : prev))}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Фильтрация</label>
-              <Input
-                value={form.filtration}
-                onChange={(e) => setForm((prev) => (prev ? { ...prev, filtration: e.target.value } : prev))}
-              />
-            </div>
+            {renderSelectableField("country", "Страна", "— Выберите страну —")}
+            {renderSelectableField("type", "Тип", "— Выберите тип —")}
+            {renderSelectableField("sort", "Сорт", "— Выберите сорт —")}
+            {renderSelectableField("filtration", "Фильтрация", "— Выберите фильтрацию —")}
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Цена (₽)</label>
               <Input

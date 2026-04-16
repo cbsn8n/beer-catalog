@@ -4,14 +4,22 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const SESSION_KEY = "beervana_cookie_notice_seen";
+const COOKIE_NAME = "beervana_cookie_notice";
+
+function hasCookie(name: string) {
+  return document.cookie.split(";").some((entry) => entry.trim().startsWith(`${name}=`));
+}
 
 export function CookieNotice() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     try {
-      const seen = sessionStorage.getItem(SESSION_KEY);
-      if (!seen) {
+      const seenSession = sessionStorage.getItem(SESSION_KEY) === "1";
+      const seenPersistent = localStorage.getItem(SESSION_KEY) === "1";
+      const seenCookie = hasCookie(COOKIE_NAME);
+
+      if (!seenSession && !seenPersistent && !seenCookie) {
         setVisible(true);
       }
     } catch {
@@ -22,6 +30,8 @@ export function CookieNotice() {
   const accept = () => {
     try {
       sessionStorage.setItem(SESSION_KEY, "1");
+      localStorage.setItem(SESSION_KEY, "1");
+      document.cookie = `${COOKIE_NAME}=1; Max-Age=${60 * 60 * 24 * 30}; Path=/; SameSite=Lax`;
     } catch {
       // ignore
     }

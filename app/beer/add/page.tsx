@@ -4,6 +4,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { AddBeerForm } from "@/components/add-beer-form";
+import { LoginModalTriggerButton } from "@/components/login-modal-trigger-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
@@ -44,9 +45,7 @@ export default async function AddBeerPage() {
                       Форма доступна только авторизованным пользователям.
                     </span>
                   </div>
-                  <Link href="/login">
-                    <Button size="lg">Войти через Telegram</Button>
-                  </Link>
+                  <LoginModalTriggerButton size="lg">Войти через Telegram</LoginModalTriggerButton>
                 </div>
               ) : (
                 <AddBeerForm />
