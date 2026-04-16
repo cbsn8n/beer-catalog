@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Beer } from "lucide-react";
 
 export function Footer() {
@@ -10,13 +11,13 @@ export function Footer() {
           <Beer className="h-5 w-5 text-amber-600" />
           <span className="font-semibold">Beervana</span>
         </div>
-        <div className="flex gap-6 text-sm text-gray-500">
-          <a href="#" className="hover:text-gray-900 transition-colors">
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500 sm:justify-end">
+          <Link href="/privacy" className="transition-colors hover:text-gray-900">
             Политика конфиденциальности
-          </a>
-          <a href="#" className="hover:text-gray-900 transition-colors">
+          </Link>
+          <Link href="/legal" className="transition-colors hover:text-gray-900">
             Правовая информация
-          </a>
+          </Link>
         </div>
       </div>
     </footer>
