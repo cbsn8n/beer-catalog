@@ -71,6 +71,7 @@ export function BeerImageGallery({
   const [generateJob, setGenerateJob] = useState<GenerateJob | null>(null);
   const [generateBusy, setGenerateBusy] = useState<"start" | "regen" | null>(null);
   const [generateErr, setGenerateErr] = useState<string | null>(null);
+  const [loadedMain, setLoadedMain] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (active >= normalized.length) {
@@ -130,12 +131,38 @@ export function BeerImageGallery({
 
   const activeIndex = Math.max(0, Math.min(active, normalized.length - 1));
   const current = normalized[activeIndex] || normalized[0];
+  const isCurrentMainLoaded = Boolean(current?.main && loadedMain[current.main]);
+
+  const markMainLoaded = (src: string) => {
+    setLoadedMain((prev) => (prev[src] ? prev : { ...prev, [src]: true }));
+  };
+
   const prev = () => {
     setActive((v) => (v - 1 + normalized.length) % normalized.length);
   };
   const next = () => {
     setActive((v) => (v + 1) % normalized.length);
   };
+
+  useEffect(() => {
+    if (normalized.length === 0) return;
+
+    const indexes = [
+      activeIndex,
+      (activeIndex + 1) % normalized.length,
+      (activeIndex - 1 + normalized.length) % normalized.length,
+    ];
+
+    indexes.forEach((idx) => {
+      const src = normalized[idx]?.main;
+      if (!src || loadedMain[src]) return;
+
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => markMainLoaded(src);
+      img.src = src;
+    });
+  }, [activeIndex, normalized, loadedMain]);
 
   const rotateCurrent = async (degrees: 90 | -90) => {
     if (!isAdmin || !current?.local || rotateBusy) return;
@@ -264,17 +291,34 @@ export function BeerImageGallery({
         onClick={() => setOpen(true)}
       >
         <div className="relative aspect-[4/5] overflow-hidden bg-white sm:aspect-square">
-          <div className="flex h-full w-full items-center justify-center overflow-hidden">
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={current.thumb || current.main}
+              alt=""
+              aria-hidden="true"
+              className="block h-full w-full max-w-full object-contain opacity-85"
+            />
+
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={current.main}
               alt={alt}
-              className="block h-full w-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+              loading="eager"
+              decoding="async"
+              className={`absolute inset-0 block h-full w-full max-w-full object-contain transition-all duration-300 group-hover:scale-105 ${isCurrentMainLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => markMainLoaded(current.main)}
               onError={(e) => {
                 const fallback = images[activeIndex]?.remote;
                 if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
               }}
             />
+
+            {!isCurrentMainLoaded && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/40">
+                <div className="h-7 w-7 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              </div>
+            )}
           </div>
         </div>
       </button>
@@ -437,16 +481,35 @@ export function BeerImageGallery({
                   </button>
                 </>
               )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={current.main}
-                alt={alt}
-                className="mx-auto block h-auto max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
-                onError={(e) => {
-                  const fallback = images[activeIndex]?.remote;
-                  if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
-                }}
-              />
+              <div className="relative mx-auto h-auto max-h-[85vh] w-full max-w-full rounded-2xl bg-black/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={current.thumb || current.main}
+                  alt=""
+                  aria-hidden="true"
+                  className="mx-auto block h-auto max-h-[85vh] w-full max-w-full rounded-2xl object-contain opacity-70"
+                />
+
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={current.main}
+                  alt={alt}
+                  loading="eager"
+                  decoding="async"
+                  className={`absolute inset-0 mx-auto block h-auto max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl transition-opacity duration-300 ${isCurrentMainLoaded ? "opacity-100" : "opacity-0"}`}
+                  onLoad={() => markMainLoaded(current.main)}
+                  onError={(e) => {
+                    const fallback = images[activeIndex]?.remote;
+                    if (fallback && e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                  }}
+                />
+
+                {!isCurrentMainLoaded && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
