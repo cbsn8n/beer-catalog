@@ -343,7 +343,7 @@ export function BeerImageGallery({
                   <div key={res.imageUrl} className="overflow-hidden rounded-lg border bg-white">
                     <div className="aspect-square overflow-hidden bg-stone-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={res.imageUrl} alt={res.title} className="h-full w-full object-cover" />
+                      <img src={res.imageUrl} alt={`${alt} — найденное фото`} className="h-full w-full object-cover" />
                     </div>
                     <div className="space-y-1 p-2">
                       <div className="line-clamp-2 text-[11px] text-gray-700" title={res.title}>{res.title}</div>
@@ -405,7 +405,7 @@ export function BeerImageGallery({
                 <div className="mt-2 overflow-hidden rounded-lg border bg-white p-2">
                   <div className="mb-1 text-xs text-gray-600">Сгенерированный вариант ({generateJob.model})</div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={generateJob.resultImageUrl} alt="Generated beer" className="h-44 w-full rounded object-contain" />
+                  <img src={generateJob.resultImageUrl} alt={`${alt} — сгенерированное фото`} className="h-44 w-full rounded object-contain" />
                 </div>
               )}
             </div>

@@ -429,7 +429,7 @@ export function BeerAdminEditDialog({
                   <div key={item.id} className="rounded-lg border bg-white p-2">
                     <div className="mb-2 aspect-square overflow-hidden rounded bg-stone-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.preview} alt={`beer-${index + 1}`} className="h-full w-full object-cover" />
+                      <img src={item.preview} alt={`${form.name || beer.name} — фото ${index + 1}`} className="h-full w-full object-cover" />
                     </div>
                     <div className="flex items-center gap-1">
                       <Button type="button" size="icon" variant="outline" onClick={() => moveImage(index, -1)} disabled={index === 0}>
