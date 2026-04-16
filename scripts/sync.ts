@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import https from "https";
 import http from "http";
+import { normalizeBeerName, readSyncOverrides } from "../lib/sync-overrides";
 
 const API_URL = process.env.NOCO_DB_API_URL!;
 const API_KEY = process.env.NOCO_DB_API_KEY!;
@@ -125,7 +126,7 @@ function toBool(v: unknown): boolean {
 }
 
 function normalizeName(v: unknown) {
-  return typeof v === "string" ? v.trim().toLowerCase() : "";
+  return normalizeBeerName(v);
 }
 
 function hasAnyImages(beer: Partial<BeerLike> | null | undefined) {
@@ -211,14 +212,34 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
     if (n && !byName.has(n)) byName.set(n, { beer, idx });
   });
 
+  const overrides = readSyncOverrides();
+  const deletedById = new Set(
+    overrides.deletedBeers
+      .map((item) => item.id)
+      .filter((id): id is number => Number.isFinite(id))
+  );
+  const deletedByName = new Set(
+    overrides.deletedBeers
+      .map((item) => item.normalizedName)
+      .filter((name): name is string => Boolean(name))
+  );
+
   const matchedIdx = new Set<number>();
   const merged: BeerLike[] = [];
   const imageTasks: Array<{ url: string; dest: string }> = [];
+  let skippedDeleted = 0;
 
   for (const incoming of incomingBuilt) {
     const incBeer = incoming.beer;
+    const incName = normalizeName(incBeer.name);
+
+    if (deletedById.has(incBeer.id) || (incName && deletedByName.has(incName))) {
+      skippedDeleted += 1;
+      continue;
+    }
+
     const byIdHit = byId.get(incBeer.id);
-    const byNameHit = byName.get(normalizeName(incBeer.name));
+    const byNameHit = byName.get(incName);
     const hit = byIdHit || byNameHit;
 
     if (!hit) {
@@ -233,15 +254,8 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
 
     const next: BeerLike = {
       ...incBeer,
-      type: prev.type ?? incBeer.type,
-      sort: prev.sort ?? incBeer.sort,
-      filtration: prev.filtration ?? incBeer.filtration,
-      country: prev.country ?? incBeer.country,
-      price: prev.price ?? incBeer.price,
-      traits: prev.traits ?? incBeer.traits,
-      rating: prev.rating ?? incBeer.rating,
-      comment: prev.comment ?? incBeer.comment,
-      imageVersion: prev.imageVersion ?? incBeer.imageVersion,
+      ...prev,
+      id: prev.id ?? incBeer.id,
     };
 
     if (keepImages) {
@@ -250,6 +264,10 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
       next.images = Array.isArray(prev.images) ? prev.images : [];
       next.imageVersion = prev.imageVersion ?? null;
     } else {
+      next.image = incBeer.image ?? null;
+      next.imageRemote = incBeer.imageRemote ?? null;
+      next.images = Array.isArray(incBeer.images) ? incBeer.images : [];
+      next.imageVersion = incBeer.imageVersion ?? null;
       imageTasks.push(...incoming.imageTasks);
     }
 
@@ -262,7 +280,7 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
     }
   }
 
-  return { beers: merged, imageTasks };
+  return { beers: merged, imageTasks, skippedDeleted };
 }
 
 async function downloadBatch(tasks: Array<{ url: string; dest: string }>) {
@@ -307,11 +325,14 @@ async function main() {
 
   const incomingBuilt = allRecords.map((rec) => buildNocoBeer(rec));
   const existing = readCurrentBeers();
-  const { beers, imageTasks } = mergeBeers(existing, incomingBuilt);
+  const { beers, imageTasks, skippedDeleted } = mergeBeers(existing, incomingBuilt);
 
   fs.writeFileSync(JSON_PATH, JSON.stringify(beers, null, 2));
   console.log(`\n📦 JSON saved: ${beers.length} beers → ${JSON_PATH}`);
-  console.log(`   Merge mode: preserve local site data + keep local-only beers`);
+  console.log(`   Merge mode: site-local priority + keep local-only beers + respect deleted tombstones`);
+  if (skippedDeleted > 0) {
+    console.log(`   Skipped by tombstones: ${skippedDeleted}`);
+  }
 
   if (!SKIP_IMAGES && imageTasks.length > 0) {
     console.log(`\n🖼  Downloading ${imageTasks.length} images...`);

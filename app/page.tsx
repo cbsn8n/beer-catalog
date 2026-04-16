@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { Filters } from "@/components/filters";
 import { BeerGrid } from "@/components/beer-grid";
+import { BeerAdminEditDialog } from "@/components/beer-admin-edit-dialog";
 import { Footer } from "@/components/footer";
 import type { Beer } from "@/lib/types";
 
@@ -20,6 +21,8 @@ export default function Home() {
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [editingBeer, setEditingBeer] = useState<Beer | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "price" | "rating">("name");
@@ -44,6 +47,15 @@ export default function Home() {
       .catch((err) => {
         setError(err.message);
         setLoading(false);
+      });
+
+    fetch("/api/beeradm/session", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        setIsAdmin(Boolean(data?.isAdmin));
+      })
+      .catch(() => {
+        setIsAdmin(false);
       });
   }, []);
 
@@ -124,6 +136,8 @@ export default function Home() {
             />
             <BeerGrid
               beers={filtered}
+              isAdmin={isAdmin}
+              onEditBeer={setEditingBeer}
               sortControls={(
                 <div className="w-full sm:w-auto">
                   <div className="sm:hidden">
@@ -170,6 +184,20 @@ export default function Home() {
         )}
       </main>
       <Footer />
+
+      <BeerAdminEditDialog
+        beer={editingBeer}
+        open={Boolean(editingBeer)}
+        onClose={() => setEditingBeer(null)}
+        onSaved={(updatedBeer) => {
+          setBeers((prev) => prev.map((item) => (item.id === updatedBeer.id ? updatedBeer : item)));
+          setEditingBeer(updatedBeer);
+        }}
+        onDeleted={(beerId) => {
+          setBeers((prev) => prev.filter((item) => item.id !== beerId));
+          setEditingBeer(null);
+        }}
+      />
     </>
   );
 }

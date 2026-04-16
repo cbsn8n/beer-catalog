@@ -5,6 +5,7 @@ import https from "https";
 import http from "http";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { addAuditEntry, addSyncHistory } from "@/lib/beeradm";
+import { normalizeBeerName, readSyncOverrides } from "@/lib/sync-overrides";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -47,7 +48,7 @@ function toBool(v: unknown): boolean {
 }
 
 function normalizeName(v: unknown) {
-  return typeof v === "string" ? v.trim().toLowerCase() : "";
+  return normalizeBeerName(v);
 }
 
 function hasAnyImages(beer: Partial<BeerLike> | null | undefined) {
@@ -196,14 +197,34 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
     if (n && !byName.has(n)) byName.set(n, { beer, idx });
   });
 
+  const overrides = readSyncOverrides();
+  const deletedById = new Set(
+    overrides.deletedBeers
+      .map((item) => item.id)
+      .filter((id): id is number => Number.isFinite(id))
+  );
+  const deletedByName = new Set(
+    overrides.deletedBeers
+      .map((item) => item.normalizedName)
+      .filter((name): name is string => Boolean(name))
+  );
+
   const matchedIdx = new Set<number>();
   const merged: BeerLike[] = [];
   const imageTasks: Array<{ url: string; dest: string }> = [];
+  let skippedDeleted = 0;
 
   for (const incoming of incomingBuilt) {
     const incBeer = incoming.beer;
+    const incName = normalizeName(incBeer.name);
+
+    if (deletedById.has(incBeer.id) || (incName && deletedByName.has(incName))) {
+      skippedDeleted += 1;
+      continue;
+    }
+
     const byIdHit = byId.get(incBeer.id);
-    const byNameHit = byName.get(normalizeName(incBeer.name));
+    const byNameHit = byName.get(incName);
     const hit = byIdHit || byNameHit;
 
     if (!hit) {
@@ -216,18 +237,11 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
     const prev = hit.beer;
     const keepImages = hasAnyImages(prev);
 
+    // Site data is authoritative for matched cards.
     const next: BeerLike = {
       ...incBeer,
-      // Keep existing enrichment from site if present.
-      type: prev.type ?? incBeer.type,
-      sort: prev.sort ?? incBeer.sort,
-      filtration: prev.filtration ?? incBeer.filtration,
-      country: prev.country ?? incBeer.country,
-      price: prev.price ?? incBeer.price,
-      traits: prev.traits ?? incBeer.traits,
-      rating: prev.rating ?? incBeer.rating,
-      comment: prev.comment ?? incBeer.comment,
-      imageVersion: prev.imageVersion ?? incBeer.imageVersion,
+      ...prev,
+      id: prev.id ?? incBeer.id,
     };
 
     if (keepImages) {
@@ -236,6 +250,10 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
       next.images = Array.isArray(prev.images) ? prev.images : [];
       next.imageVersion = prev.imageVersion ?? null;
     } else {
+      next.image = incBeer.image ?? null;
+      next.imageRemote = incBeer.imageRemote ?? null;
+      next.images = Array.isArray(incBeer.images) ? incBeer.images : [];
+      next.imageVersion = incBeer.imageVersion ?? null;
       imageTasks.push(...incoming.imageTasks);
     }
 
@@ -249,7 +267,7 @@ function mergeBeers(existing: BeerLike[], incomingBuilt: BuiltNocoBeer[]) {
     }
   }
 
-  return { beers: merged, imageTasks };
+  return { beers: merged, imageTasks, skippedDeleted };
 }
 
 export async function POST(req: NextRequest) {
@@ -292,7 +310,7 @@ export async function POST(req: NextRequest) {
 
     const incomingBuilt = allRecords.map((rec) => buildNocoBeer(rec, API_URL));
     const existing = readCurrentBeers();
-    const { beers, imageTasks } = mergeBeers(existing, incomingBuilt);
+    const { beers, imageTasks, skippedDeleted } = mergeBeers(existing, incomingBuilt);
 
     fs.writeFileSync(JSON_PATH, JSON.stringify(beers, null, 2));
 
@@ -338,6 +356,7 @@ export async function POST(req: NextRequest) {
       failed,
       durationMs,
       mergedWithLocal: true,
+      skippedDeleted,
     });
 
     return NextResponse.json({
@@ -346,6 +365,7 @@ export async function POST(req: NextRequest) {
       durationMs,
       images: { downloaded, skipped, failed },
       mergedWithLocal: true,
+      skippedDeleted,
     });
   } catch (err: any) {
     const finishedMs = Date.now();

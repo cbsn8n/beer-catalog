@@ -10,9 +10,11 @@ const PAGE_SIZE = 30;
 interface BeerGridProps {
   beers: Beer[];
   sortControls?: React.ReactNode;
+  isAdmin?: boolean;
+  onEditBeer?: (beer: Beer) => void;
 }
 
-export function BeerGrid({ beers, sortControls }: BeerGridProps) {
+export function BeerGrid({ beers, sortControls, isAdmin = false, onEditBeer }: BeerGridProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +60,13 @@ export function BeerGrid({ beers, sortControls }: BeerGridProps) {
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visible.map((beer, i) => (
-          <BeerCard key={beer.id} beer={beer} index={i} />
+          <BeerCard
+            key={beer.id}
+            beer={beer}
+            index={i}
+            isAdmin={isAdmin}
+            onEdit={onEditBeer}
+          />
         ))}
       </div>
       {hasMore && (
