@@ -139,10 +139,22 @@ export function Header() {
               </Button>
             )}
 
-            <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Beer className="h-4 w-4" />
-                <span className="hidden sm:inline">Создателю на пиво</span>
+            <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer" aria-label="Создателю на пиво" title="Создателю на пиво">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:hidden"
+              >
+                <Beer className="h-4 w-4 text-amber-600" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden gap-2 rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:inline-flex"
+              >
+                <Beer className="h-4 w-4 text-amber-600" />
+                <span>Создателю на пиво</span>
               </Button>
             </a>
           </div>
