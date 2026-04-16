@@ -122,23 +122,6 @@ export function Header() {
             <span className="text-xl font-bold tracking-tight">Beervana</span>
           </Link>
           <div className="flex items-center gap-2">
-            {loading ? null : user ? (
-              <>
-                <span className="hidden max-w-36 truncate text-sm text-gray-700 sm:inline" title={displayName}>
-                  {displayName}
-                </span>
-                <Button variant="outline" size="sm" onClick={logout} disabled={logoutLoading} className="gap-2">
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Выйти</span>
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" size="sm" className="gap-2" onClick={openLogin}>
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Войти</span>
-              </Button>
-            )}
-
             <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer" aria-label="Создателю на пиво" title="Создателю на пиво">
               <Button
                 variant="outline"
@@ -157,6 +140,23 @@ export function Header() {
                 <span>Создателю на пиво</span>
               </Button>
             </a>
+
+            {loading ? null : user ? (
+              <>
+                <span className="hidden max-w-36 truncate text-sm text-gray-700 sm:inline" title={displayName}>
+                  {displayName}
+                </span>
+                <Button variant="outline" size="sm" onClick={logout} disabled={logoutLoading} className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Выйти</span>
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" className="gap-2" onClick={openLogin}>
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Войти</span>
+              </Button>
+            )}
           </div>
         </div>
       </header>

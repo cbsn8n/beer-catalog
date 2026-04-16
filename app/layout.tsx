@@ -11,7 +11,19 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: "Beervana — база пива от Ивана",
-  description: "Каталог крафтового и не только пива. Фильтруй, оценивай, делись.",
+  description:
+    "Beervana — каталог пива с рейтингами, отзывами и фото. Удобные фильтры по стране, сорту, цене и вкусовым характеристикам.",
+  keywords: [
+    "пиво",
+    "каталог пива",
+    "рейтинг пива",
+    "отзывы о пиве",
+    "крафтовое пиво",
+    "сорта пива",
+    "цены на пиво",
+    "Beervana",
+    "vana beer",
+  ],
   icons: {
     icon: [{ url: "/icons/beer-mug.svg", type: "image/svg+xml" }],
     shortcut: [{ url: "/icons/beer-mug.svg", type: "image/svg+xml" }],
