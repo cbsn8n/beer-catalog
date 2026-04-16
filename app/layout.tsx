@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Geist } from "next/font/google";
+import { CookieNotice } from "@/components/cookie-notice";
 import "./globals.css";
 
 const geist = Geist({
@@ -57,6 +58,7 @@ export default function RootLayout({
         </noscript>
 
         {children}
+        <CookieNotice />
       </body>
     </html>
   );

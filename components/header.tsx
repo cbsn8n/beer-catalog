@@ -138,6 +138,13 @@ export function Header() {
                 <span className="hidden sm:inline">Войти</span>
               </Button>
             )}
+
+            <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Beer className="h-4 w-4" />
+                <span className="hidden sm:inline">Создателю на пиво</span>
+              </Button>
+            </a>
           </div>
         </div>
       </header>
@@ -154,7 +161,6 @@ export function Header() {
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Войти через Telegram</h3>
-                <p className="text-sm text-gray-600">Без перехода на отдельную страницу.</p>
               </div>
               <Button type="button" variant="outline" size="icon-sm" onClick={() => setLoginOpen(false)}>
                 <X className="h-4 w-4" />
