@@ -53,7 +53,7 @@ export function BeerCard({
               <div className="flex h-full w-full items-center justify-center overflow-hidden bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`${beer.image}?w=420&q=62${beer.imageVersion ? `&v=${beer.imageVersion}` : ""}`}
+                  src={`${beer.image}?w=420&q=62&r=2${beer.imageVersion ? `&v=${beer.imageVersion}` : ""}`}
                   alt={beer.name}
                   className="block h-full w-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
