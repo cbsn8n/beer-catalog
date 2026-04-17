@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import sharp from "sharp";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -26,6 +27,7 @@ export async function GET(
 
     const w = req.nextUrl.searchParams.get("w");
     const q = req.nextUrl.searchParams.get("q");
+    const v = req.nextUrl.searchParams.get("v") || "";
     const size = w ? Math.min(parseInt(w), 1200) : null;
     const quality = q ? Math.min(parseInt(q), 90) : 72;
 
@@ -42,7 +44,11 @@ export async function GET(
     }
 
     fs.mkdirSync(THUMBS_DIR, { recursive: true });
-    const thumbName = `${path.parse(fileName).name}_v4_${size}q${quality}.webp`;
+
+    const stat = fs.statSync(filePath);
+    const sourceSignature = `${fileName}|${Math.floor(stat.mtimeMs)}|${v}`;
+    const signature = crypto.createHash("sha1").update(sourceSignature).digest("hex").slice(0, 12);
+    const thumbName = `${path.parse(fileName).name}_${signature}_${size}q${quality}.webp`;
     const thumbPath = path.join(THUMBS_DIR, thumbName);
 
     if (!fs.existsSync(thumbPath)) {

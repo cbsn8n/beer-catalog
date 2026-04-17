@@ -85,7 +85,7 @@ function invalidateThumbCacheForLocal(localUrl: string) {
 
   const files = fs.readdirSync(THUMBS_DIR);
   for (const file of files) {
-    if (file.startsWith(`${base}_v4_`)) {
+    if (file.startsWith(`${base}_`) && file.endsWith(".webp")) {
       try {
         fs.unlinkSync(path.join(THUMBS_DIR, file));
       } catch {

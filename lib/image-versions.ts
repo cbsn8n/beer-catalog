@@ -108,18 +108,36 @@ export function setImageVersion(local: string | null | undefined, version = Date
 export function annotateBeerImageVersions(beers: Beer[]): Beer[] {
   const map = readImageVersionMap();
 
+  const resolveVersion = (local: string | null | undefined, fallback: number | null | undefined) => {
+    const normalized = normalizeLocal(local);
+    if (!normalized) return fallback ?? null;
+
+    const fromMap = map[normalized];
+    if (typeof fromMap === "number") return fromMap;
+
+    const abs = localToAbs(normalized);
+    if (abs && fs.existsSync(abs)) {
+      try {
+        const stat = fs.statSync(abs);
+        const mtime = Math.floor(stat.mtimeMs);
+        map[normalized] = mtime;
+        return mtime;
+      } catch {
+        // ignore
+      }
+    }
+
+    return fallback ?? null;
+  };
+
   return beers.map((beer) => {
-    const main = normalizeLocal(beer.image || null);
-    const imageVersion = main ? map[main] ?? beer.imageVersion ?? null : beer.imageVersion ?? null;
+    const imageVersion = resolveVersion(beer.image || null, beer.imageVersion ?? null);
 
     const images = Array.isArray(beer.images)
-      ? beer.images.map((img) => {
-          const local = normalizeLocal(img.local);
-          return {
-            ...img,
-            version: local ? map[local] ?? img.version ?? null : img.version ?? null,
-          };
-        })
+      ? beer.images.map((img) => ({
+          ...img,
+          version: resolveVersion(img.local, img.version ?? null),
+        }))
       : beer.images;
 
     return {
