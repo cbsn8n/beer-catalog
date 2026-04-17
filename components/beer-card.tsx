@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Pencil, Star, Beer as BeerIcon } from "lucide-react";
 import { getFlagSrc } from "@/lib/country-meta";
+import { formatBeerPriceApprox } from "@/lib/price-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,7 +91,9 @@ export function BeerCard({
                 </span>
               )}
             </div>
-            {beer.price != null && <div className="mt-1 text-sm font-semibold text-gray-700">{beer.price} ₽</div>}
+            {beer.price != null && (
+              <div className="mt-1 text-sm font-semibold text-gray-700">{formatBeerPriceApprox(beer.price)}</div>
+            )}
           </CardContent>
         </Link>
       </Card>

@@ -10,6 +10,7 @@ import { BeerGrid } from "@/components/beer-grid";
 import { BeerAdminEditDialog } from "@/components/beer-admin-edit-dialog";
 import { Footer } from "@/components/footer";
 import type { Beer } from "@/lib/types";
+import { getBeerPriceBounds, isBeerPriceInSelectedRange } from "@/lib/price-display";
 
 const SORT_OPTIONS = [
   { value: "name", label: "По названию", icon: ArrowDownAZ },
@@ -39,7 +40,10 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
       })
       .then((data: Beer[]) => {
         setBeers(data);
-        const maxP = Math.max(...data.map((b) => b.price ?? 0), 100);
+        const maxP = Math.max(
+          ...data.map((b) => getBeerPriceBounds(b.price)?.max ?? 0),
+          100
+        );
         setPriceRange([0, Math.ceil(maxP / 10) * 10]);
         setLoading(false);
       })
@@ -50,7 +54,7 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
   }, []);
 
   const maxPrice = useMemo(() => {
-    const m = Math.max(...beers.map((b) => b.price ?? 0), 100);
+    const m = Math.max(...beers.map((b) => getBeerPriceBounds(b.price)?.max ?? 0), 100);
     return Math.ceil(m / 10) * 10;
   }, [beers]);
 
@@ -80,13 +84,14 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
       if (selectedCountries.length > 0 && (!beer.country || !selectedCountries.includes(beer.country))) return false;
       if (selectedTraits.some((trait) => !(beer.traits as Record<string, boolean>)[trait])) return false;
       if (beer.rating != null && (beer.rating < ratingRange[0] || beer.rating > ratingRange[1])) return false;
-      if (beer.price != null && (beer.price < priceRange[0] || beer.price > priceRange[1])) return false;
+      if (!isBeerPriceInSelectedRange(beer.price, priceRange[0], priceRange[1])) return false;
       return true;
     });
 
     return [...list].sort((a, b) => {
       if (sortBy === "price") {
-        return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
+        return (getBeerPriceBounds(a.price)?.min ?? Number.MAX_SAFE_INTEGER)
+          - (getBeerPriceBounds(b.price)?.min ?? Number.MAX_SAFE_INTEGER);
       }
       if (sortBy === "rating") {
         return (b.rating ?? -1) - (a.rating ?? -1);

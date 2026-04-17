@@ -179,7 +179,7 @@ export function Filters({
 
             <div>
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Цена: {priceRange[0]}₽ — {priceRange[1]}₽
+                Цена: ~{priceRange[0]}-{priceRange[1]} ₽
               </h3>
               <Slider min={0} max={maxPrice} step={10} value={priceRange} onValueChange={(v) => onSetPriceRange(v as [number, number])} className="max-w-md" />
             </div>

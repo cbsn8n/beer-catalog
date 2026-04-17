@@ -14,6 +14,7 @@ import { BeerContributionForm } from "@/components/beer-contribution-form";
 import { BeerDetailAdminEdit } from "@/components/beer-detail-admin-edit";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { getImageVersion } from "@/lib/image-versions";
+import { formatBeerPriceApprox } from "@/lib/price-display";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
 
@@ -109,7 +110,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                 {beer.price != null && (
                   <div className="flex items-center gap-2">
                     <Tag className="h-4 w-4" />
-                    {beer.price} ₽
+                    {formatBeerPriceApprox(beer.price)}
                   </div>
                 )}
               </div>
