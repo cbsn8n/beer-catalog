@@ -1,13 +1,20 @@
 import fs from "fs";
 import path from "path";
-import type { Beer } from "@/lib/types";
+import type { Beer, BeerImage } from "@/lib/types";
 import type { UserSession } from "@/lib/user-auth";
+import {
+  getBeerById,
+  getNextBeerId,
+  isBeerNameTaken,
+  type NovelTaxonomyValue,
+  readBeersData,
+  writeBeersData,
+} from "@/lib/beers-store";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const ADMIN_DIR = path.join(DATA_DIR, "admin");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const THUMBS_DIR = path.join(DATA_DIR, "thumbs");
-const BEERS_JSON_PATH = path.join(DATA_DIR, "beers.json");
 const SYNC_HISTORY_PATH = path.join(ADMIN_DIR, "sync-history.json");
 const AUDIT_LOG_PATH = path.join(ADMIN_DIR, "audit.log");
 const MODERATION_QUEUE_PATH = path.join(ADMIN_DIR, "moderation-queue.json");
@@ -38,6 +45,7 @@ export type ModerationStatus = "pending" | "approved" | "rejected";
 
 export interface ModerationNewBeerPayload {
   kind: "new-beer";
+  beerId?: number;
   name: string;
   country: string | null;
   type: string | null;
@@ -48,19 +56,19 @@ export interface ModerationNewBeerPayload {
   comment: string | null;
   imageLocal: string | null;
   imageRemote: string | null;
+  novelFields?: NovelTaxonomyValue[];
   traits: Beer["traits"];
 }
 
-export interface ModerationBeerUpdatePayload {
-  kind: "beer-update";
+export interface ModerationBeerReviewPayload {
+  kind: "beer-review";
   beerId: number;
-  rating: number | null;
   comment: string | null;
   imageLocal: string | null;
   imageRemote: string | null;
 }
 
-export type ModerationPayload = ModerationNewBeerPayload | ModerationBeerUpdatePayload;
+export type ModerationPayload = ModerationNewBeerPayload | ModerationBeerReviewPayload;
 
 export interface ModerationSubmission {
   id: string;
@@ -104,36 +112,37 @@ function countFilesRecursive(dirPath: string): number {
   return total;
 }
 
-function readBeers(): Beer[] {
-  return safeReadJson<Beer[]>(BEERS_JSON_PATH, []);
+function readBeers() {
+  return readBeersData();
 }
 
 function writeBeers(beers: Beer[]) {
-  fs.writeFileSync(BEERS_JSON_PATH, JSON.stringify(beers, null, 2));
+  writeBeersData(beers);
 }
 
 function generateId(prefix = "mod") {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
-function normalizeName(value: string) {
-  return value.trim().toLowerCase();
-}
-
 function toOneDecimal(n: number) {
   return Math.round(n * 10) / 10;
 }
 
+function uniqueImages(images: BeerImage[]) {
+  const result: BeerImage[] = [];
+  for (const image of images) {
+    const exists = result.some((item) => item.local === image.local && item.remote === image.remote);
+    if (!exists) result.push(image);
+  }
+  return result;
+}
+
 export function isBeerNameExists(name: string) {
-  const n = normalizeName(name);
-  if (!n) return false;
-  const beers = readBeers();
-  return beers.some((beer) => normalizeName(beer.name) === n);
+  return isBeerNameTaken(name, { includePrivateFromOthers: true });
 }
 
 export function beerExistsById(beerId: number) {
-  const beers = readBeers();
-  return beers.some((beer) => beer.id === beerId);
+  return Boolean(getBeerById(beerId));
 }
 
 export function addSyncHistory(entry: SyncHistoryEntry) {
@@ -213,24 +222,62 @@ export function addModerationSubmission(input: {
 }
 
 function applyNewBeer(payload: ModerationNewBeerPayload) {
-  if (isBeerNameExists(payload.name)) {
+  const beers = readBeers();
+
+  if (typeof payload.beerId === "number") {
+    const idx = beers.findIndex((beer) => beer.id === payload.beerId);
+    if (idx !== -1) {
+      const current = beers[idx];
+
+      if (isBeerNameTaken(payload.name, { userId: current.ownerUserId, excludeBeerId: current.id })) {
+        throw new Error("Пиво с таким названием уже есть в базе");
+      }
+
+      const mergedImages = uniqueImages([
+        ...(Array.isArray(current.images) ? current.images : []),
+        ...(payload.imageLocal || payload.imageRemote
+          ? [{ local: payload.imageLocal, remote: payload.imageRemote }]
+          : []),
+      ]);
+
+      const updated: Beer = {
+        ...current,
+        name: payload.name,
+        country: payload.country,
+        type: payload.type,
+        sort: payload.sort,
+        filtration: payload.filtration,
+        price: payload.price,
+        traits: payload.traits,
+        comment: payload.comment ?? current.comment,
+        image: payload.imageLocal ?? current.image,
+        imageRemote: payload.imageRemote ?? current.imageRemote,
+        images: mergedImages,
+        visibility: "public",
+        ownerUserId: null,
+        createdByUserId: current.createdByUserId ?? current.ownerUserId ?? null,
+      };
+
+      beers[idx] = updated;
+      writeBeers(beers);
+
+      return { beerId: updated.id, beerName: updated.name };
+    }
+  }
+
+  if (isBeerNameTaken(payload.name, { includePrivateFromOthers: true })) {
     throw new Error("Пиво с таким названием уже есть в базе");
   }
 
-  const beers = readBeers();
-  const maxId = beers.reduce((max, beer) => Math.max(max, beer.id || 0), 0);
-  const nextId = maxId + 1;
-
+  const nextId = getNextBeerId(beers);
   const item: Beer = {
     id: nextId,
     name: payload.name,
     image: payload.imageLocal,
     imageRemote: payload.imageRemote,
-    images: payload.imageLocal
+    images: payload.imageLocal || payload.imageRemote
       ? [{ local: payload.imageLocal, remote: payload.imageRemote }]
-      : payload.imageRemote
-        ? [{ local: null, remote: payload.imageRemote }]
-        : [],
+      : [],
     type: payload.type,
     sort: payload.sort,
     filtration: payload.filtration,
@@ -239,6 +286,8 @@ function applyNewBeer(payload: ModerationNewBeerPayload) {
     traits: payload.traits,
     rating: payload.rating,
     comment: payload.comment,
+    visibility: "public",
+    ownerUserId: null,
   };
 
   beers.push(item);
@@ -247,7 +296,7 @@ function applyNewBeer(payload: ModerationNewBeerPayload) {
   return { beerId: nextId, beerName: payload.name };
 }
 
-function applyBeerUpdate(payload: ModerationBeerUpdatePayload, user: ModerationSubmission["user"]) {
+function applyBeerReview(payload: ModerationBeerReviewPayload, user: ModerationSubmission["user"]) {
   const beers = readBeers();
   const idx = beers.findIndex((beer) => beer.id === payload.beerId);
   if (idx === -1) {
@@ -255,15 +304,6 @@ function applyBeerUpdate(payload: ModerationBeerUpdatePayload, user: ModerationS
   }
 
   const beer = beers[idx];
-
-  if (typeof payload.rating === "number") {
-    const r = toOneDecimal(payload.rating);
-    if (beer.rating == null) {
-      beer.rating = r;
-    } else {
-      beer.rating = toOneDecimal((beer.rating + r) / 2);
-    }
-  }
 
   if (payload.comment) {
     const author = user.username ? `${user.first_name} (@${user.username})` : user.first_name;
@@ -274,18 +314,14 @@ function applyBeerUpdate(payload: ModerationBeerUpdatePayload, user: ModerationS
 
   if (payload.imageRemote || payload.imageLocal) {
     const images = Array.isArray(beer.images) ? [...beer.images] : [];
+    const candidate = {
+      local: payload.imageLocal,
+      remote: payload.imageRemote,
+    };
 
-    const exists = images.some(
-      (img) =>
-        (payload.imageRemote && img.remote === payload.imageRemote) ||
-        (payload.imageLocal && img.local === payload.imageLocal)
-    );
-
+    const exists = images.some((img) => img.local === candidate.local && img.remote === candidate.remote);
     if (!exists) {
-      images.push({
-        local: payload.imageLocal,
-        remote: payload.imageRemote,
-      });
+      images.push(candidate);
     }
 
     beer.images = images;
@@ -303,7 +339,7 @@ function applyModerationApproval(submission: ModerationSubmission) {
   if (submission.payload.kind === "new-beer") {
     return applyNewBeer(submission.payload);
   }
-  return applyBeerUpdate(submission.payload, submission.user);
+  return applyBeerReview(submission.payload, submission.user);
 }
 
 export function reviewModerationSubmission(input: {
@@ -350,14 +386,16 @@ export function reviewModerationSubmission(input: {
 }
 
 export function getBeeradmOverview() {
-  const beers = safeReadJson<unknown[]>(BEERS_JSON_PATH, []);
+  const beers = readBeers();
   const syncHistory = readSyncHistory(20);
   const audit = readAuditEntries(20);
   const moderation = readModerationSubmissions(100);
   const moderationPending = moderation.filter((entry) => entry.status === "pending");
+  const moderationPendingReviews = moderationPending.filter((entry) => entry.payload.kind === "beer-review");
+  const moderationPendingCards = moderationPending.filter((entry) => entry.payload.kind === "new-beer");
 
   return {
-    beersCount: Array.isArray(beers) ? beers.length : 0,
+    beersCount: beers.length,
     imagesCount: countFilesRecursive(IMAGES_DIR),
     thumbsCount: countFilesRecursive(THUMBS_DIR),
     syncHistory,
@@ -365,6 +403,8 @@ export function getBeeradmOverview() {
     lastSync: syncHistory[0] ?? null,
     moderationPending,
     moderationPendingCount: moderationPending.length,
+    moderationPendingReviews,
+    moderationPendingCards,
     moderationRecent: moderation.slice(0, 30),
   };
 }

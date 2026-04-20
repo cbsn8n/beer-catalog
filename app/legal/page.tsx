@@ -8,7 +8,7 @@ export const metadata = {
 export default function LegalPage() {
   return (
     <>
-      <Header />
+      <Header showCatalogSwitch={false} />
       <main className="min-h-screen flex-1 bg-gradient-to-b from-amber-50 to-white">
         <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
           <div className="rounded-2xl border bg-white p-6 shadow-sm">

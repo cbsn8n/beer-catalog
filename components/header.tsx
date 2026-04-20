@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Beer, LogIn, LogOut, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TelegramLoginWidget } from "@/components/telegram-login-widget";
+import {
+  CATALOG_VIEW_EVENT,
+  CATALOG_VIEW_STORAGE_KEY,
+  normalizeCatalogViewMode,
+  type CatalogViewMode,
+} from "@/lib/catalog-view";
 
 type UserSession = {
   id: number;
@@ -23,16 +29,79 @@ type TelegramConfig = {
 
 export const OPEN_LOGIN_EVENT = "beervana:open-login";
 
-export function Header() {
+type LoginEventDetail = {
+  note?: string;
+};
+
+function dispatchCatalogViewChange(mode: CatalogViewMode) {
+  localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, mode);
+  window.dispatchEvent(new CustomEvent(CATALOG_VIEW_EVENT, { detail: { mode } }));
+}
+
+function readCatalogViewMode() {
+  if (typeof window === "undefined") return "all" as CatalogViewMode;
+  return normalizeCatalogViewMode(window.localStorage.getItem(CATALOG_VIEW_STORAGE_KEY));
+}
+
+function CatalogViewSwitch({
+  value,
+  onChange,
+}: {
+  value: CatalogViewMode;
+  onChange: (mode: CatalogViewMode) => void;
+}) {
+  return (
+    <div className="relative grid w-full max-w-[240px] grid-cols-2 rounded-full bg-stone-200 p-1 text-[11px] font-semibold text-stone-700 shadow-inner sm:max-w-[280px] sm:text-sm">
+      <span
+        className={`absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          value === "all" ? "translate-x-0" : "translate-x-full"
+        }`}
+      />
+      <button
+        type="button"
+        className={`relative z-10 rounded-full px-3 py-2 transition-colors ${
+          value === "all" ? "text-amber-900" : "text-stone-600"
+        }`}
+        onClick={() => onChange("all")}
+      >
+        Общая база
+      </button>
+      <button
+        type="button"
+        className={`relative z-10 rounded-full px-3 py-2 transition-colors ${
+          value === "my" ? "text-amber-900" : "text-stone-600"
+        }`}
+        onClick={() => onChange("my")}
+      >
+        Моя база
+      </button>
+    </div>
+  );
+}
+
+export function Header({
+  initialUser = null,
+  showCatalogSwitch = true,
+}: {
+  initialUser?: UserSession | null;
+  showCatalogSwitch?: boolean;
+}) {
   const router = useRouter();
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const [user, setUser] = useState<UserSession | null>(initialUser);
+  const [loading, setLoading] = useState(initialUser ? false : true);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const [loginOpen, setLoginOpen] = useState(false);
+  const [loginNote, setLoginNote] = useState<string | null>(null);
   const [telegramConfig, setTelegramConfig] = useState<TelegramConfig | null>(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [catalogMode, setCatalogMode] = useState<CatalogViewMode>("all");
+
+  useEffect(() => {
+    setCatalogMode(readCatalogViewMode());
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -71,7 +140,9 @@ export function Header() {
   }, [loginOpen]);
 
   useEffect(() => {
-    const handler = () => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<LoginEventDetail>).detail;
+      setLoginNote(detail?.note || null);
       setLoginOpen(true);
       loadTelegramConfig().catch(() => null);
     };
@@ -79,6 +150,22 @@ export function Header() {
     window.addEventListener(OPEN_LOGIN_EVENT, handler as EventListener);
     return () => window.removeEventListener(OPEN_LOGIN_EVENT, handler as EventListener);
   }, [telegramConfig, telegramLoading]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ mode?: CatalogViewMode }>).detail;
+      setCatalogMode(normalizeCatalogViewMode(detail?.mode));
+    };
+
+    window.addEventListener(CATALOG_VIEW_EVENT, handler as EventListener);
+    return () => window.removeEventListener(CATALOG_VIEW_EVENT, handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (user || catalogMode !== "my") return;
+    setCatalogMode("all");
+    dispatchCatalogViewChange("all");
+  }, [user, catalogMode]);
 
   const displayName = useMemo(() => {
     if (!user) return "";
@@ -108,9 +195,24 @@ export function Header() {
     }
   };
 
-  const openLogin = () => {
+  const openLogin = (note?: string) => {
+    setLoginNote(note || null);
     setLoginOpen(true);
     loadTelegramConfig().catch(() => null);
+  };
+
+  const setViewMode = (mode: CatalogViewMode) => {
+    if (mode === "my" && !user) {
+      openLogin("Создай свою базу пива.");
+      return;
+    }
+
+    setCatalogMode(mode);
+    dispatchCatalogViewChange(mode);
+
+    if (pathname !== "/") {
+      router.push("/");
+    }
   };
 
   const logout = async () => {
@@ -119,6 +221,8 @@ export function Header() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       setUser(null);
+      setCatalogMode("all");
+      dispatchCatalogViewChange("all");
       router.refresh();
     } finally {
       setLogoutLoading(false);
@@ -128,48 +232,65 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <Beer className="h-6 w-6 text-amber-600" />
-            <span className="text-xl font-bold tracking-tight">Beervana</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer" aria-label="Создателю на пиво" title="Создателю на пиво">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:hidden"
-              >
-                <Beer className="h-4 w-4 text-amber-600" />
-              </Button>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex h-16 items-center gap-3 sm:gap-4">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
+              <Beer className="h-6 w-6 text-amber-600" />
+              <span className="text-xl font-bold tracking-tight">Beervana</span>
+            </Link>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden gap-2 rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:inline-flex"
-              >
-                <Beer className="h-4 w-4 text-amber-600" />
-                <span>Создателю на пиво</span>
-              </Button>
-            </a>
-
-            {loading ? null : user ? (
-              <>
-                <span className="hidden max-w-36 truncate text-sm text-gray-700 sm:inline" title={displayName}>
-                  {displayName}
-                </span>
-                <Button variant="outline" size="sm" onClick={logout} disabled={logoutLoading} className="gap-2">
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Выйти</span>
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" size="sm" className="gap-2" onClick={openLogin}>
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Войти</span>
-              </Button>
+            {showCatalogSwitch && (
+              <div className="hidden flex-1 justify-center md:flex">
+                <CatalogViewSwitch value={catalogMode} onChange={setViewMode} />
+              </div>
             )}
+
+            <div className="ml-auto flex items-center gap-2">
+              <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer" aria-label="Создателю на пиво" title="Создателю на пиво">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:hidden"
+                >
+                  <Beer className="h-4 w-4 text-amber-600" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden gap-2 rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:inline-flex"
+                >
+                  <Beer className="h-4 w-4 text-amber-600" />
+                  <span>Создателю на пиво</span>
+                </Button>
+              </a>
+
+              {loading ? null : user ? (
+                <>
+                  <span className="hidden max-w-36 truncate text-sm text-gray-700 sm:inline" title={displayName}>
+                    {displayName}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={logout} disabled={logoutLoading} className="gap-2">
+                    <LogOut className="h-4 w-4" />
+                    <span className="hidden sm:inline">Выйти</span>
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => openLogin()}>
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Войти</span>
+                </Button>
+              )}
+            </div>
           </div>
+
+          {showCatalogSwitch && (
+            <div className="pb-3 md:hidden">
+              <div className="flex justify-center">
+                <CatalogViewSwitch value={catalogMode} onChange={setViewMode} />
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -185,6 +306,7 @@ export function Header() {
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Войти через Telegram</h3>
+                {loginNote && <p className="mt-1 text-sm text-gray-600">{loginNote}</p>}
               </div>
               <Button type="button" variant="outline" size="icon-sm" onClick={() => setLoginOpen(false)}>
                 <X className="h-4 w-4" />

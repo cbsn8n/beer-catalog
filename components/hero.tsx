@@ -7,10 +7,19 @@ import { Beer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BeerBubblesBackground } from "@/components/ui/beer-bubbles-background";
 import { OPEN_LOGIN_EVENT } from "@/components/header";
+import type { CatalogViewMode } from "@/lib/catalog-view";
 
-export function Hero() {
+export function Hero({
+  mode,
+  userName,
+}: {
+  mode: CatalogViewMode;
+  userName?: string | null;
+}) {
   const router = useRouter();
   const [addBusy, setAddBusy] = useState(false);
+
+  const isPersonal = mode === "my";
 
   const scrollToFilters = () => {
     document.getElementById("beer-filters")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -26,7 +35,9 @@ export function Hero() {
       if (data?.user) {
         router.push("/beer/add");
       } else {
-        window.dispatchEvent(new Event(OPEN_LOGIN_EVENT));
+        window.dispatchEvent(new CustomEvent(OPEN_LOGIN_EVENT, {
+          detail: { note: "Создай свою базу пива." },
+        }));
       }
     } finally {
       setAddBusy(false);
@@ -34,20 +45,36 @@ export function Hero() {
   };
 
   return (
-    <section className="hero-beer-bg relative overflow-hidden py-16 sm:py-24">
-      <BeerBubblesBackground />
+    <section
+      className={`relative overflow-hidden py-16 sm:py-24 ${
+        isPersonal
+          ? "bg-gradient-to-br from-amber-100 via-orange-50 to-white"
+          : "hero-beer-bg"
+      }`}
+    >
+      {!isPersonal && <BeerBubblesBackground />}
 
       <div className="relative z-20 mx-auto max-w-7xl px-4 text-center sm:px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
-            Уникальный сервис подбора пива
+          <div
+            className={`mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium backdrop-blur-sm ${
+              isPersonal
+                ? "border border-amber-200 bg-white/85 text-amber-900"
+                : "bg-white/20 text-white"
+            }`}
+          >
+            {isPersonal ? "Твоя персональная база" : "Уникальный сервис подбора пива"}
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
+          <h1 className={`text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl ${isPersonal ? "text-amber-950" : "text-white"}`}>
             <span className="block">
-              Beer<span className="text-amber-100">vana</span>
+              Beer<span className={isPersonal ? "text-amber-600" : "text-amber-100"}>vana</span>
             </span>
-            <span className="mt-3 block text-xl font-semibold tracking-normal text-orange-50 sm:text-2xl md:text-3xl">
-              база пива от Ивана
+            <span
+              className={`mt-3 block text-xl font-semibold tracking-normal sm:text-2xl md:text-3xl ${
+                isPersonal ? "text-amber-800" : "text-orange-50"
+              }`}
+            >
+              база пива от {isPersonal ? (userName || "тебя") : "Ивана"}
             </span>
           </h1>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -67,10 +94,14 @@ export function Hero() {
               size="lg"
               variant="outline"
               onClick={scrollToFilters}
-              className="min-h-16 rounded-full border-white/60 bg-white/80 px-8 py-7 text-lg font-semibold text-amber-700 backdrop-blur-sm hover:bg-white/90"
+              className={`min-h-16 rounded-full px-8 py-7 text-lg font-semibold backdrop-blur-sm ${
+                isPersonal
+                  ? "border-amber-300 bg-white text-amber-800 hover:bg-amber-50"
+                  : "border-white/60 bg-white/80 text-amber-700 hover:bg-white/90"
+              }`}
             >
               <span className="mr-2 text-xl leading-none">👇</span>
-              Выбрать пиво на вечер
+              {isPersonal ? "Выбрать пиво из моей базы" : "Выбрать пиво на вечер"}
             </Button>
           </div>
         </motion.div>

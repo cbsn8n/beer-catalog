@@ -27,4 +27,12 @@ export interface Beer {
   };
   rating: number | null;
   comment: string | null;
+  visibility?: "public" | "user-only";
+  ownerUserId?: number | null;
+  createdByUserId?: number | null;
+  userRating?: number | null;
+  userComment?: string | null;
+  userImages?: BeerImage[];
+  userUpdatedAt?: string | null;
+  userAddedByUser?: boolean;
 }

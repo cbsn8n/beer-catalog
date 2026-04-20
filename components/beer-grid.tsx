@@ -12,9 +12,10 @@ interface BeerGridProps {
   sortControls?: React.ReactNode;
   isAdmin?: boolean;
   onEditBeer?: (beer: Beer) => void;
+  emptyText?: string;
 }
 
-export function BeerGrid({ beers, sortControls, isAdmin = false, onEditBeer }: BeerGridProps) {
+export function BeerGrid({ beers, sortControls, isAdmin = false, onEditBeer, emptyText }: BeerGridProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +48,7 @@ export function BeerGrid({ beers, sortControls, isAdmin = false, onEditBeer }: B
   if (beers.length === 0) {
     return (
       <div className="py-16 text-center text-gray-500">
-        Ничего не найдено. Попробуй изменить фильтры.
+        {emptyText || "Ничего не найдено. Попробуй изменить фильтры."}
       </div>
     );
   }

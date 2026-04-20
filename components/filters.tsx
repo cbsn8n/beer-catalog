@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 interface FiltersProps {
   beers: Beer[];
+  title?: string;
   selectedSorts: string[];
   selectedCountries: string[];
   selectedTraits: string[];
@@ -50,6 +51,7 @@ const TRAIT_LABELS: Record<string, string> = {
 
 export function Filters({
   beers,
+  title = "Выбери своё пиво на вечер:",
   selectedSorts,
   selectedCountries,
   selectedTraits,
@@ -87,7 +89,7 @@ export function Filters({
 
   return (
     <section id="beer-filters" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">Выбери своё пиво на вечер:</h2>
+      <h2 className="mb-6 text-2xl font-bold text-gray-900">{title}</h2>
       <div className="rounded-xl border bg-white p-6 shadow-sm">
         <div className="mb-6 relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

@@ -47,7 +47,16 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
       setRating(null);
       setComment("");
       setImageFile(null);
-      setOk("Изменения отправлены на модерацию.");
+
+      if (data?.ratingApplied && data?.reviewQueued) {
+        setOk("Сохранено: оценка сразу попала в твою базу, отзыв отправлен на модерацию.");
+      } else if (data?.ratingApplied) {
+        setOk("Оценка сразу сохранена в твоей базе.");
+      } else if (data?.reviewQueued) {
+        setOk("Отзыв сохранён в твоей базе и отправлен на модерацию для общей базы.");
+      } else {
+        setOk("Сохранено в твоей базе.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка отправки");
     } finally {
@@ -80,7 +89,7 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        Все изменения (оценка, комментарий, фото) публикуются после модерации.
+        Оценка попадает в твою базу сразу. Комментарий и фото отдельно уходят на модерацию для общей базы.
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
@@ -88,7 +97,7 @@ export function BeerContributionForm({ beerId }: { beerId: number }) {
 
       <Button type="submit" disabled={!canSubmit}>
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        Отправить на модерацию
+        Сохранить в мою базу
       </Button>
     </form>
   );

@@ -147,7 +147,7 @@ export function AddBeerForm() {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
 
-      setOk("Заявка отправлена на модерацию. После проверки пиво появится в базе.");
+      setOk("Пиво сразу добавлено в твою базу. Для общей базы карточка ушла на модерацию админа.");
       setForm(INITIAL_STATE);
       setRating(null);
       setImageFile(null);
@@ -225,12 +225,12 @@ export function AddBeerForm() {
             })}
           </div>
           <div className="text-sm text-gray-600">
-            Открой карточку и добавь рейтинг / фото / комментарий — это тоже уйдёт на модерацию.
+            Открой карточку и добавь свою оценку / фото / комментарий — пиво сразу появится в твоей базе.
           </div>
         </div>
       ) : (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Похоже, такого пива ещё нет в нашей базе. Заполните данные ниже — отправим на модерацию.
+          Похоже, такого пива ещё нет в общей базе. Заполните данные ниже — оно сразу появится в твоей базе.
         </div>
       )}
 
@@ -344,7 +344,7 @@ export function AddBeerForm() {
 
           <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={!canSubmit}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Отправить на модерацию
+            Добавить в мою базу
           </Button>
         </>
       )}

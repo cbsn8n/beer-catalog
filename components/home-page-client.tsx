@@ -10,6 +10,13 @@ import { BeerGrid } from "@/components/beer-grid";
 import { BeerAdminEditDialog } from "@/components/beer-admin-edit-dialog";
 import { Footer } from "@/components/footer";
 import type { Beer } from "@/lib/types";
+import type { UserSession } from "@/lib/user-auth";
+import {
+  CATALOG_VIEW_EVENT,
+  CATALOG_VIEW_STORAGE_KEY,
+  normalizeCatalogViewMode,
+  type CatalogViewMode,
+} from "@/lib/catalog-view";
 import { getBeerPriceBounds, isBeerPriceInSelectedRange } from "@/lib/price-display";
 
 const SORT_OPTIONS = [
@@ -18,11 +25,31 @@ const SORT_OPTIONS = [
   { value: "rating", label: "По рейтингу", icon: Star },
 ] as const;
 
-export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) {
-  const [beers, setBeers] = useState<Beer[]>([]);
-  const [loading, setLoading] = useState(true);
+function getMaxPrice(beers: Beer[]) {
+  const max = Math.max(...beers.map((beer) => getBeerPriceBounds(beer.price)?.max ?? 0), 100);
+  return Math.ceil(max / 10) * 10;
+}
+
+function readCatalogMode() {
+  if (typeof window === "undefined") return "all" as CatalogViewMode;
+  return normalizeCatalogViewMode(window.localStorage.getItem(CATALOG_VIEW_STORAGE_KEY));
+}
+
+export function HomePageClient({
+  initialIsAdmin,
+  initialUser,
+}: {
+  initialIsAdmin: boolean;
+  initialUser: UserSession | null;
+}) {
+  const [publicBeers, setPublicBeers] = useState<Beer[]>([]);
+  const [personalBeers, setPersonalBeers] = useState<Beer[]>([]);
+  const [publicLoading, setPublicLoading] = useState(true);
+  const [personalLoading, setPersonalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingBeer, setEditingBeer] = useState<Beer | null>(null);
+  const [user, setUser] = useState<UserSession | null>(initialUser);
+  const [catalogMode, setCatalogMode] = useState<CatalogViewMode>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "price" | "rating">("name");
@@ -33,30 +60,110 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
 
   useEffect(() => {
-    fetch("/api/beers")
+    setCatalogMode(readCatalogMode());
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ mode?: CatalogViewMode }>).detail;
+      setCatalogMode(normalizeCatalogViewMode(detail?.mode));
+    };
+
+    window.addEventListener(CATALOG_VIEW_EVENT, handler as EventListener);
+    return () => window.removeEventListener(CATALOG_VIEW_EVENT, handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((payload) => {
+        if (!active) return;
+        setUser(payload?.user ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setUser(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/beers", { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((data: Beer[]) => {
-        setBeers(data);
-        const maxP = Math.max(
-          ...data.map((b) => getBeerPriceBounds(b.price)?.max ?? 0),
-          100
-        );
-        setPriceRange([0, Math.ceil(maxP / 10) * 10]);
-        setLoading(false);
+        if (!active) return;
+        setPublicBeers(data);
       })
       .catch((err) => {
+        if (!active) return;
         setError(err.message);
-        setLoading(false);
+      })
+      .finally(() => {
+        if (!active) return;
+        setPublicLoading(false);
       });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const maxPrice = useMemo(() => {
-    const m = Math.max(...beers.map((b) => getBeerPriceBounds(b.price)?.max ?? 0), 100);
-    return Math.ceil(m / 10) * 10;
-  }, [beers]);
+  useEffect(() => {
+    if (catalogMode !== "my" || !user) {
+      setPersonalLoading(false);
+      return;
+    }
+
+    let active = true;
+    setPersonalLoading(true);
+    setError(null);
+
+    fetch("/api/user/base", { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((payload) => {
+        if (!active) return;
+        setPersonalBeers(Array.isArray(payload?.beers) ? payload.beers : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (!active) return;
+        setPersonalLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [catalogMode, user]);
+
+  useEffect(() => {
+    if (user || catalogMode !== "my") return;
+    setCatalogMode("all");
+    window.localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, "all");
+  }, [user, catalogMode]);
+
+  const sourceBeers = catalogMode === "my" && user ? personalBeers : publicBeers;
+
+  useEffect(() => {
+    setPriceRange([0, getMaxPrice(sourceBeers)]);
+  }, [sourceBeers]);
+
+  const maxPrice = useMemo(() => getMaxPrice(sourceBeers), [sourceBeers]);
 
   const toggleSort = useCallback((sort: string) => {
     setSelectedSorts((prev) =>
@@ -78,7 +185,7 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const list = beers.filter((beer) => {
+    const list = sourceBeers.filter((beer) => {
       if (q && !beer.name.toLowerCase().includes(q)) return false;
       if (selectedSorts.length > 0 && (!beer.sort || !selectedSorts.includes(beer.sort))) return false;
       if (selectedCountries.length > 0 && (!beer.country || !selectedCountries.includes(beer.country))) return false;
@@ -98,13 +205,30 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
       }
       return a.name.localeCompare(b.name, "ru");
     });
-  }, [beers, searchQuery, selectedSorts, selectedCountries, selectedTraits, ratingRange, priceRange, sortBy]);
+  }, [sourceBeers, searchQuery, selectedSorts, selectedCountries, selectedTraits, ratingRange, priceRange, sortBy]);
+
+  const loading = publicLoading || (catalogMode === "my" && Boolean(user) && personalLoading);
+
+  const personalDisplayName = useMemo(() => {
+    if (!user) return null;
+    if (user.first_name) return user.first_name;
+    if (user.username) return user.username;
+    return "тебя";
+  }, [user]);
+
+  const filtersTitle = catalogMode === "my"
+    ? "Фильтры по моей базе"
+    : "Выбери своё пиво на вечер:";
+
+  const emptyText = catalogMode === "my"
+    ? "В твоей базе пока нет пива. Добавь новое пиво или поставь оценку существующей карточке."
+    : "Ничего не найдено. Попробуй изменить фильтры.";
 
   return (
     <>
-      <Header />
+      <Header initialUser={user} showCatalogSwitch />
       <main className="flex-1">
-        <Hero />
+        <Hero mode={catalogMode} userName={personalDisplayName} />
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
@@ -114,7 +238,8 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
         ) : (
           <>
             <Filters
-              beers={beers}
+              beers={sourceBeers}
+              title={filtersTitle}
               selectedSorts={selectedSorts}
               selectedCountries={selectedCountries}
               selectedTraits={selectedTraits}
@@ -133,6 +258,7 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
               beers={filtered}
               isAdmin={initialIsAdmin}
               onEditBeer={setEditingBeer}
+              emptyText={emptyText}
               sortControls={(
                 <div className="w-full sm:w-auto">
                   <div className="sm:hidden">
@@ -185,11 +311,13 @@ export function HomePageClient({ initialIsAdmin }: { initialIsAdmin: boolean }) 
         open={Boolean(editingBeer)}
         onClose={() => setEditingBeer(null)}
         onSaved={(updatedBeer) => {
-          setBeers((prev) => prev.map((item) => (item.id === updatedBeer.id ? updatedBeer : item)));
+          setPublicBeers((prev) => prev.map((item) => (item.id === updatedBeer.id ? updatedBeer : item)));
+          setPersonalBeers((prev) => prev.map((item) => (item.id === updatedBeer.id ? updatedBeer : item)));
           setEditingBeer(updatedBeer);
         }}
         onDeleted={(beerId) => {
-          setBeers((prev) => prev.filter((item) => item.id !== beerId));
+          setPublicBeers((prev) => prev.filter((item) => item.id !== beerId));
+          setPersonalBeers((prev) => prev.filter((item) => item.id !== beerId));
           setEditingBeer(null);
         }}
       />

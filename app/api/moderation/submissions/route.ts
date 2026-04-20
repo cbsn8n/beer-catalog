@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { addAuditEntry, addModerationSubmission, beerExistsById, isBeerNameExists, type ModerationPayload } from "@/lib/beeradm";
+import {
+  canAccessBeer,
+  detectNovelTaxonomyValues,
+  getBeerById,
+  isBeerNameTaken,
+} from "@/lib/beers-store";
+import {
+  addAuditEntry,
+  addModerationSubmission,
+  type ModerationBeerReviewPayload,
+  type ModerationNewBeerPayload,
+} from "@/lib/beeradm";
 import { setImageVersion } from "@/lib/image-versions";
+import { createPersonalBeer, upsertUserBeerEntry } from "@/lib/user-base";
 import { getUserFromRequest } from "@/lib/user-auth";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const UPLOADS_DIR = path.join(IMAGES_DIR, "uploads");
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
+
+type BeerUpdateInput = {
+  kind: "beer-update";
+  beerId: number;
+  rating: number | null;
+  comment: string | null;
+  imageLocal: string | null;
+  imageRemote: string | null;
+};
 
 function asNullableString(value: unknown) {
   if (typeof value !== "string") return null;
@@ -104,15 +125,16 @@ async function readInput(req: NextRequest): Promise<{ raw: any; imageLocal: stri
 
 function parsePayload(
   raw: any,
-  imageLocal: string | null
-): { ok: true; payload: ModerationPayload } | { ok: false; error: string; status?: number } {
+  imageLocal: string | null,
+  userId: number
+): { ok: true; payload: ModerationNewBeerPayload | BeerUpdateInput } | { ok: false; error: string; status?: number } {
   const kind = raw?.kind;
 
   if (kind === "new-beer") {
     const name = asNullableString(raw?.name);
     if (!name) return { ok: false, error: "Название обязательно" };
 
-    if (isBeerNameExists(name)) {
+    if (isBeerNameTaken(name, { userId })) {
       return { ok: false, error: "Пиво с таким названием уже есть в базе", status: 409 };
     }
 
@@ -126,20 +148,26 @@ function parsePayload(
       return { ok: false, error: "Цена не может быть отрицательной" };
     }
 
+    const country = asNullableString(raw?.country);
+    const type = asNullableString(raw?.type);
+    const sort = asNullableString(raw?.sort);
+    const filtration = asNullableString(raw?.filtration);
+
     return {
       ok: true,
       payload: {
         kind: "new-beer",
         name,
-        country: asNullableString(raw?.country),
-        type: asNullableString(raw?.type),
-        sort: asNullableString(raw?.sort),
-        filtration: asNullableString(raw?.filtration),
+        country,
+        type,
+        sort,
+        filtration,
         price,
         rating,
         comment: asNullableString(raw?.comment),
         imageLocal,
         imageRemote: asNullableString(raw?.imageRemote),
+        novelFields: detectNovelTaxonomyValues({ country, type, sort, filtration }),
         traits: {
           socks: asBool(raw?.traits?.socks),
           bitter: asBool(raw?.traits?.bitter),
@@ -156,7 +184,11 @@ function parsePayload(
   if (kind === "beer-update") {
     const beerId = Number(raw?.beerId);
     if (!Number.isFinite(beerId)) return { ok: false, error: "Некорректный beerId" };
-    if (!beerExistsById(beerId)) return { ok: false, error: "Карточка пива не найдена", status: 404 };
+
+    const beer = getBeerById(beerId);
+    if (!beer || !canAccessBeer(beer, { userId })) {
+      return { ok: false, error: "Карточка пива не найдена", status: 404 };
+    }
 
     const rating = asNullableNumber(raw?.rating);
     if (rating != null && (rating < 1 || rating > 10)) {
@@ -193,28 +225,108 @@ export async function POST(req: NextRequest) {
 
   try {
     const { raw, imageLocal } = await readInput(req);
-    const parsed = parsePayload(raw, imageLocal);
+    const parsed = parsePayload(raw, imageLocal, user.id);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: parsed.status || 400 });
     }
 
-    const submission = addModerationSubmission({
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        username: user.username,
-      },
-      payload: parsed.payload,
+    if (parsed.payload.kind === "new-beer") {
+      const createdBeer = createPersonalBeer({
+        user,
+        name: parsed.payload.name,
+        country: parsed.payload.country,
+        type: parsed.payload.type,
+        sort: parsed.payload.sort,
+        filtration: parsed.payload.filtration,
+        price: parsed.payload.price,
+        rating: parsed.payload.rating,
+        comment: parsed.payload.comment,
+        imageLocal: parsed.payload.imageLocal,
+        imageRemote: parsed.payload.imageRemote,
+        traits: parsed.payload.traits,
+      });
+
+      const submission = addModerationSubmission({
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          username: user.username,
+        },
+        payload: {
+          ...parsed.payload,
+          beerId: createdBeer.id,
+        },
+      });
+
+      addAuditEntry("user_submission_created", {
+        submissionId: submission.id,
+        kind: submission.payload.kind,
+        beerId: createdBeer.id,
+        userId: user.id,
+        username: user.username || null,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        beerId: createdBeer.id,
+        submissionId: submission.id,
+        status: submission.status,
+      });
+    }
+
+    upsertUserBeerEntry({
+      user,
+      beerId: parsed.payload.beerId,
+      rating: typeof parsed.payload.rating === "number" ? parsed.payload.rating : undefined,
+      comment: parsed.payload.comment,
+      imageLocal: parsed.payload.imageLocal,
+      imageRemote: parsed.payload.imageRemote,
     });
+
+    let reviewSubmission: { id: string; status: string } | null = null;
+
+    if (parsed.payload.comment || parsed.payload.imageLocal || parsed.payload.imageRemote) {
+      const reviewPayload: ModerationBeerReviewPayload = {
+        kind: "beer-review",
+        beerId: parsed.payload.beerId,
+        comment: parsed.payload.comment,
+        imageLocal: parsed.payload.imageLocal,
+        imageRemote: parsed.payload.imageRemote,
+      };
+
+      const submission = addModerationSubmission({
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          username: user.username,
+        },
+        payload: reviewPayload,
+      });
+
+      reviewSubmission = {
+        id: submission.id,
+        status: submission.status,
+      };
+    }
 
     addAuditEntry("user_submission_created", {
-      submissionId: submission.id,
-      kind: submission.payload.kind,
+      kind: parsed.payload.kind,
+      beerId: parsed.payload.beerId,
       userId: user.id,
       username: user.username || null,
+      ratingApplied: typeof parsed.payload.rating === "number",
+      reviewQueued: Boolean(reviewSubmission),
+      submissionId: reviewSubmission?.id || null,
     });
 
-    return NextResponse.json({ ok: true, submissionId: submission.id, status: submission.status });
+    return NextResponse.json({
+      ok: true,
+      beerId: parsed.payload.beerId,
+      ratingApplied: typeof parsed.payload.rating === "number",
+      reviewQueued: Boolean(reviewSubmission),
+      submissionId: reviewSubmission?.id || null,
+      status: reviewSubmission?.status || null,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Unknown error" }, { status: 500 });
   }

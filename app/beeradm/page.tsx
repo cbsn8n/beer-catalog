@@ -44,13 +44,14 @@ function getActiveTab(input?: string): TabKey {
 }
 
 function kindLabel(item: ModerationSubmission) {
-  return item.payload.kind === "new-beer" ? "Новая карточка" : "Обновление карточки";
+  return item.payload.kind === "new-beer" ? "Новая карточка" : "Новый отзыв";
 }
 
 function renderModerationPayload(item: ModerationSubmission) {
   if (item.payload.kind === "new-beer") {
     return (
       <div className="space-y-2 text-sm text-gray-700">
+        <div><span className="font-medium">Карточка:</span> #{item.payload.beerId || "—"}</div>
         <div><span className="font-medium">Название:</span> {item.payload.name}</div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div><span className="font-medium">Страна:</span> {item.payload.country || "—"}</div>
@@ -61,8 +62,21 @@ function renderModerationPayload(item: ModerationSubmission) {
             <span className="font-medium">Цена:</span>{" "}
             {item.payload.price != null ? formatBeerPriceApprox(item.payload.price) : "—"}
           </div>
-          <div><span className="font-medium">Оценка:</span> {item.payload.rating ?? "—"}</div>
+          <div><span className="font-medium">Стартовая оценка:</span> {item.payload.rating ?? "—"}</div>
         </div>
+
+        {item.payload.novelFields?.length ? (
+          <div>
+            <span className="font-medium">Новые значения для общей базы:</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {item.payload.novelFields.map((field) => (
+                <span key={`${field.field}-${field.value}`} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                  {field.field}: {field.value}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div>
           <span className="font-medium">Комментарий:</span>
@@ -96,7 +110,6 @@ function renderModerationPayload(item: ModerationSubmission) {
   return (
     <div className="space-y-2 text-sm text-gray-700">
       <div><span className="font-medium">Карточка:</span> #{item.payload.beerId}</div>
-      <div><span className="font-medium">Оценка:</span> {item.payload.rating ?? "—"}</div>
       <div>
         <span className="font-medium">Комментарий:</span>
         <div className="mt-1 whitespace-pre-wrap rounded-md border bg-white px-2 py-1 text-gray-700">
@@ -141,7 +154,7 @@ export default async function BeeradmPage({
 
   return (
     <>
-      <Header />
+      <Header showCatalogSwitch={false} />
       <main className="min-h-screen flex-1 bg-gradient-to-b from-amber-50 to-white">
         <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <Card className="rounded-2xl border bg-white/95 shadow-sm">
@@ -214,37 +227,72 @@ export default async function BeeradmPage({
                   )}
 
                   {activeTab === "moderation" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Заявки на модерацию</h3>
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Отзывы на модерацию</h3>
 
-                      {overview?.moderationPending?.length ? (
-                        <div className="space-y-3">
-                          {overview.moderationPending.map((item) => (
-                            <div key={item.id} className="rounded-xl border bg-white p-3">
-                              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-                                <div className="text-sm text-gray-800">
-                                  <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
+                        {overview?.moderationPendingReviews?.length ? (
+                          <div className="space-y-3">
+                            {overview.moderationPendingReviews.map((item) => (
+                              <div key={item.id} className="rounded-xl border bg-white p-3">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                                  <div className="text-sm text-gray-800">
+                                    <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {item.user.first_name}
+                                    {item.user.username ? ` (@${item.user.username})` : ""}
+                                  </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                  {item.user.first_name}
-                                  {item.user.username ? ` (@${item.user.username})` : ""}
+
+                                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                                  {renderModerationPayload(item)}
+                                  <div className="lg:min-w-[150px]">
+                                    <BeeradmModerationActions submissionId={item.id} />
+                                  </div>
                                 </div>
                               </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
+                            Новых отзывов на модерацию нет.
+                          </div>
+                        )}
+                      </div>
 
-                              <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                                {renderModerationPayload(item)}
-                                <div className="lg:min-w-[150px]">
-                                  <BeeradmModerationActions submissionId={item.id} />
+                      <div className="space-y-4 border-t pt-4">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Новые / изменённые карточки</h3>
+
+                        {overview?.moderationPendingCards?.length ? (
+                          <div className="space-y-3">
+                            {overview.moderationPendingCards.map((item) => (
+                              <div key={item.id} className="rounded-xl border bg-white p-3">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                                  <div className="text-sm text-gray-800">
+                                    <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {item.user.first_name}
+                                    {item.user.username ? ` (@${item.user.username})` : ""}
+                                  </div>
+                                </div>
+
+                                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                                  {renderModerationPayload(item)}
+                                  <div className="lg:min-w-[150px]">
+                                    <BeeradmModerationActions submissionId={item.id} />
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
-                          Новых заявок на модерацию нет.
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
+                            Новых карточек на модерацию нет.
+                          </div>
+                        )}
+                      </div>
 
                       <div className="border-t pt-4">
                         <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Недавно обработанные</h4>
@@ -273,7 +321,7 @@ export default async function BeeradmPage({
                                       {item.status}
                                     </td>
                                     <td className="px-3 py-2 whitespace-pre-wrap text-gray-700">
-                                      {item.note || (item.payload.kind === "beer-update" ? item.payload.comment : item.payload.comment) || "—"}
+                                      {item.note || item.payload.comment || "—"}
                                     </td>
                                   </tr>
                                 ))}

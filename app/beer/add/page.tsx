@@ -18,7 +18,7 @@ export default async function AddBeerPage() {
 
   return (
     <>
-      <Header />
+      <Header initialUser={user} showCatalogSwitch={false} />
       <main className="min-h-screen flex-1 bg-gradient-to-b from-amber-50 to-white">
         <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <Link href="/">
@@ -32,7 +32,7 @@ export default async function AddBeerPage() {
             <CardHeader>
               <CardTitle className="text-2xl font-bold text-gray-900">Добавить пиво</CardTitle>
               <CardDescription>
-                Новые записи и изменения по существующим карточкам проходят модерацию.
+                Новая карточка сразу попадает в твою базу, а для общей базы отдельно уходит на модерацию.
               </CardDescription>
             </CardHeader>
 

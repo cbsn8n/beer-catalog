@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
@@ -12,20 +10,14 @@ import { Footer } from "@/components/footer";
 import { BeerImageGallery } from "@/components/beer-image-gallery";
 import { BeerContributionForm } from "@/components/beer-contribution-form";
 import { BeerDetailAdminEdit } from "@/components/beer-detail-admin-edit";
+import { LoginModalTriggerButton } from "@/components/login-modal-trigger-button";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
+import { canAccessBeer, getBeerById } from "@/lib/beers-store";
 import { getImageVersion } from "@/lib/image-versions";
 import { formatBeerPriceApprox } from "@/lib/price-display";
+import { getUserBeerEntry, computeDisplayedBeerRating } from "@/lib/user-base";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
-
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
-const JSON_PATH = path.join(DATA_DIR, "beers.json");
-
-function getBeer(id: number): Beer | null {
-  if (!fs.existsSync(JSON_PATH)) return null;
-  const beers = JSON.parse(fs.readFileSync(JSON_PATH, "utf-8")) as Beer[];
-  return beers.find((b) => b.id === id) || null;
-}
 
 const TRAITS: Record<keyof Beer["traits"], string> = {
   bitter: "Горчит",
@@ -39,15 +31,19 @@ const TRAITS: Record<keyof Beer["traits"], string> = {
 
 export default async function BeerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const beer = getBeer(Number(id));
-  if (!beer) notFound();
-
   const cookieStore = await cookies();
   const user = verifyUserSessionToken(cookieStore.get(USER_COOKIE_NAME)?.value);
   const isAdmin = verifyAdminSessionToken(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
 
+  const beer = getBeerById(Number(id));
+  if (!beer || !canAccessBeer(beer, { userId: user?.id, isAdmin })) {
+    notFound();
+  }
+
+  const userBeerEntry = user ? getUserBeerEntry(user.id, beer.id) : null;
   const activeTraits = Object.entries(beer.traits).filter(([, v]) => v);
-  const rating = Math.max(0, Math.min(10, Math.round(beer.rating ?? 0)));
+  const displayedRating = computeDisplayedBeerRating(beer);
+  const rating = Math.max(0, Math.min(10, Math.round(displayedRating ?? 0)));
   const imageVersion = getImageVersion(beer.image);
 
   const images = beer.images?.length
@@ -72,7 +68,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <Header />
+      <Header initialUser={user} showCatalogSwitch={false} />
       <main className="min-h-screen flex-1 bg-gradient-to-b from-amber-50 to-white">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <Link href="/">
@@ -89,6 +85,9 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
+                {beer.visibility === "user-only" && (
+                  <Badge variant="secondary">Только в моей базе</Badge>
+                )}
                 {beer.sort && <Badge>{beer.sort}</Badge>}
                 {beer.type && <Badge variant="outline">{beer.type}</Badge>}
                 {beer.filtration && <Badge variant="outline">{beer.filtration}</Badge>}
@@ -116,7 +115,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
-                <div className="mb-2 text-sm font-medium uppercase tracking-wide text-gray-500">Оценка</div>
+                <div className="mb-2 text-sm font-medium uppercase tracking-wide text-gray-500">Общая оценка</div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 text-amber-500">
                     {Array.from({ length: 10 }).map((_, i) => (
@@ -126,9 +125,31 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                       />
                     ))}
                   </div>
-                  <div className="font-semibold text-amber-700">{beer.rating ?? "—"}/10</div>
+                  <div className="font-semibold text-amber-700">{displayedRating ?? "—"}/10</div>
                 </div>
               </div>
+
+              {userBeerEntry && (
+                <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                  <div className="mb-2 text-sm font-medium uppercase tracking-wide text-amber-700">Моя база</div>
+                  <div className="space-y-3 text-sm text-amber-950">
+                    <div>
+                      <span className="font-semibold">Моя оценка:</span> {userBeerEntry.rating ?? "—"}/10
+                    </div>
+                    {userBeerEntry.comment ? (
+                      <div>
+                        <div className="mb-1 font-semibold">Мой комментарий</div>
+                        <div className="whitespace-pre-wrap rounded-lg border border-amber-200 bg-white px-3 py-2 text-gray-700">
+                          {userBeerEntry.comment}
+                        </div>
+                      </div>
+                    ) : null}
+                    {userBeerEntry.addedByUser ? (
+                      <div className="text-amber-800">Эта карточка уже есть в твоей личной базе.</div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
 
               {activeTraits.length > 0 && (
                 <div className="mt-8">
@@ -146,7 +167,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
               {beer.comment && (
                 <div className="mt-8 rounded-2xl border bg-white p-5 shadow-sm">
                   <h2 className="mb-2 text-lg font-semibold">Комментарий</h2>
-                  <p className="leading-7 text-gray-700">{beer.comment}</p>
+                  <p className="leading-7 text-gray-700 whitespace-pre-wrap">{beer.comment}</p>
                 </div>
               )}
 
@@ -156,10 +177,8 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                   <BeerContributionForm beerId={beer.id} />
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-600">Чтобы отправлять изменения, нужно войти через Telegram.</p>
-                    <Link href="/login">
-                      <Button>Войти</Button>
-                    </Link>
+                    <p className="text-sm text-gray-600">Чтобы собирать свою базу, нужно войти через Telegram.</p>
+                    <LoginModalTriggerButton size="default">Войти</LoginModalTriggerButton>
                   </div>
                 )}
               </div>

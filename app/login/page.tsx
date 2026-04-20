@@ -42,7 +42,7 @@ export default async function LoginPage({
 
   return (
     <>
-      <Header />
+      <Header showCatalogSwitch={false} />
       <main className="min-h-screen flex-1 bg-gradient-to-b from-amber-50 to-white">
         <section className="mx-auto max-w-xl px-4 py-10 sm:px-6">
           <Card className="rounded-2xl border bg-white/95 shadow-sm">
