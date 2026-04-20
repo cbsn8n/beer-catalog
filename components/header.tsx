@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Beer, LogIn, LogOut, X } from "lucide-react";
+import { Beer, LogIn, LogOut, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TelegramLoginWidget } from "@/components/telegram-login-widget";
 import {
@@ -12,14 +12,7 @@ import {
   normalizeCatalogViewMode,
   type CatalogViewMode,
 } from "@/lib/catalog-view";
-
-type UserSession = {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-};
+import type { UserView } from "@/lib/user-view";
 
 type TelegramConfig = {
   botUsername: string;
@@ -43,6 +36,27 @@ function readCatalogViewMode() {
   return normalizeCatalogViewMode(window.localStorage.getItem(CATALOG_VIEW_STORAGE_KEY));
 }
 
+function UserAvatar({ user }: { user: UserView }) {
+  const displayName = user.first_name || user.username || "User";
+
+  if (user.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={user.avatarUrl}
+        alt={displayName}
+        className="h-9 w-9 rounded-full border border-amber-200 object-cover shadow-sm"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
+      <User className="h-4 w-4" />
+    </div>
+  );
+}
+
 function CatalogViewSwitch({
   value,
   onChange,
@@ -51,15 +65,15 @@ function CatalogViewSwitch({
   onChange: (mode: CatalogViewMode) => void;
 }) {
   return (
-    <div className="relative grid w-full max-w-[240px] grid-cols-2 rounded-full bg-stone-200 p-1 text-[11px] font-semibold text-stone-700 shadow-inner sm:max-w-[280px] sm:text-sm">
+    <div className="relative grid w-full max-w-[250px] grid-cols-2 rounded-[999px] bg-stone-200 p-1 text-[11px] font-semibold text-stone-700 shadow-inner sm:max-w-[296px] sm:text-sm">
       <span
-        className={`absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-transform duration-200 ${
-          value === "all" ? "translate-x-0" : "translate-x-full"
+        className={`pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-[999px] bg-white shadow-sm transition-transform duration-200 ${
+          value === "all" ? "translate-x-0" : "translate-x-[100%]"
         }`}
       />
       <button
         type="button"
-        className={`relative z-10 rounded-full px-3 py-2 transition-colors ${
+        className={`relative z-10 rounded-[999px] px-3 py-2 transition-colors ${
           value === "all" ? "text-amber-900" : "text-stone-600"
         }`}
         onClick={() => onChange("all")}
@@ -68,7 +82,7 @@ function CatalogViewSwitch({
       </button>
       <button
         type="button"
-        className={`relative z-10 rounded-full px-3 py-2 transition-colors ${
+        className={`relative z-10 rounded-[999px] px-3 py-2 transition-colors ${
           value === "my" ? "text-amber-900" : "text-stone-600"
         }`}
         onClick={() => onChange("my")}
@@ -83,12 +97,12 @@ export function Header({
   initialUser = null,
   showCatalogSwitch = true,
 }: {
-  initialUser?: UserSession | null;
+  initialUser?: UserView | null;
   showCatalogSwitch?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<UserSession | null>(initialUser);
+  const [user, setUser] = useState<UserView | null>(initialUser);
   const [loading, setLoading] = useState(initialUser ? false : true);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
@@ -246,30 +260,14 @@ export function Header({
             )}
 
             <div className="ml-auto flex items-center gap-2">
-              <a href="https://yoomoney.ru/to/410011489257965" target="_blank" rel="noopener noreferrer" aria-label="Создателю на пиво" title="Создателю на пиво">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:hidden"
-                >
-                  <Beer className="h-4 w-4 text-amber-600" />
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hidden gap-2 rounded-full border-amber-500 text-amber-600 hover:bg-amber-50 sm:inline-flex"
-                >
-                  <Beer className="h-4 w-4 text-amber-600" />
-                  <span>Создателю на пиво</span>
-                </Button>
-              </a>
-
               {loading ? null : user ? (
                 <>
-                  <span className="hidden max-w-36 truncate text-sm text-gray-700 sm:inline" title={displayName}>
-                    {displayName}
-                  </span>
+                  <Link href="/me" className="flex items-center gap-2 rounded-full px-1 py-1 transition hover:bg-amber-50" title="Личный кабинет">
+                    <UserAvatar user={user} />
+                    <span className="hidden max-w-40 truncate text-sm font-medium text-gray-700 sm:inline" title={displayName}>
+                      {displayName}
+                    </span>
+                  </Link>
                   <Button variant="outline" size="sm" onClick={logout} disabled={logoutLoading} className="gap-2">
                     <LogOut className="h-4 w-4" />
                     <span className="hidden sm:inline">Выйти</span>

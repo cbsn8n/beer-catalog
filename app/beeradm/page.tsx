@@ -11,6 +11,7 @@ import { BeeradmLogoutButton } from "@/components/beeradm-logout-button";
 import { BeeradmModerationActions } from "@/components/beeradm-moderation-actions";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { formatBeerPriceApprox } from "@/lib/price-display";
+import { formatBeerRating } from "@/lib/rating-display";
 import { getBeeradmOverview, type ModerationSubmission } from "@/lib/beeradm";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,7 @@ function renderModerationPayload(item: ModerationSubmission) {
             <span className="font-medium">Цена:</span>{" "}
             {item.payload.price != null ? formatBeerPriceApprox(item.payload.price) : "—"}
           </div>
-          <div><span className="font-medium">Стартовая оценка:</span> {item.payload.rating ?? "—"}</div>
+          <div><span className="font-medium">Стартовая оценка:</span> {formatBeerRating(item.payload.rating)}</div>
         </div>
 
         {item.payload.novelFields?.length ? (

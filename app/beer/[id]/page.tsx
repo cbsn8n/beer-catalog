@@ -15,7 +15,8 @@ import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { canAccessBeer, getBeerById } from "@/lib/beers-store";
 import { getImageVersion } from "@/lib/image-versions";
 import { formatBeerPriceApprox } from "@/lib/price-display";
-import { getUserBeerEntry, computeDisplayedBeerRating } from "@/lib/user-base";
+import { formatBeerRating } from "@/lib/rating-display";
+import { getUserBeerEntry, computeDisplayedBeerRating, getUserView } from "@/lib/user-base";
 import { USER_COOKIE_NAME, verifyUserSessionToken } from "@/lib/user-auth";
 import type { Beer } from "@/lib/types";
 
@@ -32,7 +33,7 @@ const TRAITS: Record<keyof Beer["traits"], string> = {
 export default async function BeerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const user = verifyUserSessionToken(cookieStore.get(USER_COOKIE_NAME)?.value);
+  const user = getUserView(verifyUserSessionToken(cookieStore.get(USER_COOKIE_NAME)?.value));
   const isAdmin = verifyAdminSessionToken(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
 
   const beer = getBeerById(Number(id));
@@ -125,7 +126,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                       />
                     ))}
                   </div>
-                  <div className="font-semibold text-amber-700">{displayedRating ?? "—"}/10</div>
+                  <div className="font-semibold text-amber-700">{formatBeerRating(displayedRating)}/10</div>
                 </div>
               </div>
 
@@ -134,7 +135,7 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
                   <div className="mb-2 text-sm font-medium uppercase tracking-wide text-amber-700">Моя база</div>
                   <div className="space-y-3 text-sm text-amber-950">
                     <div>
-                      <span className="font-semibold">Моя оценка:</span> {userBeerEntry.rating ?? "—"}/10
+                      <span className="font-semibold">Моя оценка:</span> {formatBeerRating(userBeerEntry.rating)}/10
                     </div>
                     {userBeerEntry.comment ? (
                       <div>

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Beer, BeerImage } from "@/lib/types";
 import type { UserSession } from "@/lib/user-auth";
+import { USER_LEVELS, type UserLevelInfo, type UserView } from "@/lib/user-view";
 import {
   canAccessBeer,
   getNextBeerId,
@@ -29,6 +30,8 @@ export interface UserBaseProfile {
   firstName: string;
   lastName?: string;
   username?: string;
+  customAvatarLocal?: string | null;
+  heroImageLocal?: string | null;
   beers: UserBeerEntry[];
 }
 
@@ -55,16 +58,31 @@ function writeStore(store: UserBaseStore) {
   fs.writeFileSync(USER_BASES_PATH, JSON.stringify(store, null, 2));
 }
 
-function toOneDecimal(value: number) {
+function roundToOneDecimal(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-function normalizeRating(value: number) {
-  return toOneDecimal(Math.max(1, Math.min(10, value)));
+function roundUpToOneDecimal(value: number) {
+  return Math.ceil(value * 10 - 1e-9) / 10;
 }
 
-function upsertProfile(store: UserBaseStore, user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">) {
-  let profile = store.users.find((item) => item.userId === user.id);
+function normalizeRating(value: number) {
+  return roundToOneDecimal(Math.max(1, Math.min(10, value)));
+}
+
+function hasAnyInteraction(entry: UserBeerEntry) {
+  return entry.addedByUser || entry.rating != null || Boolean(entry.comment) || entry.images.length > 0;
+}
+
+function findProfile(store: UserBaseStore, userId: number) {
+  return store.users.find((item) => item.userId === userId) || null;
+}
+
+function upsertProfile(
+  store: UserBaseStore,
+  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">
+) {
+  let profile = findProfile(store, user.id);
 
   if (!profile) {
     profile = {
@@ -72,6 +90,8 @@ function upsertProfile(store: UserBaseStore, user: Pick<UserSession, "id" | "fir
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
+      customAvatarLocal: null,
+      heroImageLocal: null,
       beers: [],
     };
     store.users.push(profile);
@@ -79,6 +99,8 @@ function upsertProfile(store: UserBaseStore, user: Pick<UserSession, "id" | "fir
     profile.firstName = user.first_name;
     profile.lastName = user.last_name;
     profile.username = user.username;
+    profile.customAvatarLocal ??= null;
+    profile.heroImageLocal ??= null;
   }
 
   return profile;
@@ -107,6 +129,64 @@ function upsertBeerEntry(profile: UserBaseProfile, beerId: number) {
 
 function hasImage(images: BeerImage[], candidate: BeerImage) {
   return images.some((image) => image.local === candidate.local && image.remote === candidate.remote);
+}
+
+export function getUserBaseProfile(userId: number) {
+  const store = safeReadStore();
+  return findProfile(store, userId);
+}
+
+export function getUserInteractionCount(profile: UserBaseProfile | null | undefined) {
+  if (!profile) return 0;
+  return profile.beers.filter(hasAnyInteraction).length;
+}
+
+export function getUserLevelInfo(interactionCount: number): UserLevelInfo {
+  if (interactionCount <= 10) return USER_LEVELS[0];
+  if (interactionCount <= 100) return USER_LEVELS[1];
+  if (interactionCount <= 500) return USER_LEVELS[2];
+  if (interactionCount <= 1000) return USER_LEVELS[3];
+  return USER_LEVELS[4];
+}
+
+export function getUserView(user: UserSession | null): UserView | null {
+  if (!user) return null;
+
+  const profile = getUserBaseProfile(user.id);
+  const interactionCount = getUserInteractionCount(profile);
+  const level = getUserLevelInfo(interactionCount);
+
+  return {
+    ...user,
+    avatarUrl: profile?.customAvatarLocal || user.photo_url || null,
+    customAvatarUrl: profile?.customAvatarLocal || null,
+    heroImageUrl: profile?.heroImageLocal || null,
+    interactionCount,
+    ratingLevel: level.level,
+    ratingWeight: level.weight,
+    ratingBadgeLabel: level.badgeLabel,
+    ratingLevelTitle: level.title,
+  };
+}
+
+export function updateUserProfileMedia(input: {
+  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">;
+  customAvatarLocal?: string | null;
+  heroImageLocal?: string | null;
+}) {
+  const store = safeReadStore();
+  const profile = upsertProfile(store, input.user);
+
+  if (input.customAvatarLocal !== undefined) {
+    profile.customAvatarLocal = input.customAvatarLocal;
+  }
+
+  if (input.heroImageLocal !== undefined) {
+    profile.heroImageLocal = input.heroImageLocal;
+  }
+
+  writeStore(store);
+  return profile;
 }
 
 export function upsertUserBeerEntry(input: {
@@ -150,25 +230,26 @@ export function upsertUserBeerEntry(input: {
 }
 
 export function getUserBeerEntry(userId: number, beerId: number) {
-  const store = safeReadStore();
-  const profile = store.users.find((item) => item.userId === userId);
+  const profile = getUserBaseProfile(userId);
   if (!profile) return null;
   return profile.beers.find((item) => item.beerId === beerId) || null;
 }
 
-export function getUserBaseProfile(userId: number) {
-  const store = safeReadStore();
-  return store.users.find((item) => item.userId === userId) || null;
-}
+type WeightedUserRating = {
+  rating: number;
+  weight: number;
+};
 
-function buildRatingsIndex(store: UserBaseStore) {
-  const index = new Map<number, number[]>();
+function buildWeightedRatingsIndex(store: UserBaseStore) {
+  const index = new Map<number, WeightedUserRating[]>();
 
-  for (const user of store.users) {
-    for (const entry of user.beers) {
+  for (const profile of store.users) {
+    const weight = getUserLevelInfo(getUserInteractionCount(profile)).weight;
+
+    for (const entry of profile.beers) {
       if (typeof entry.rating !== "number") continue;
       const list = index.get(entry.beerId) ?? [];
-      list.push(entry.rating);
+      list.push({ rating: entry.rating, weight });
       index.set(entry.beerId, list);
     }
   }
@@ -176,66 +257,54 @@ function buildRatingsIndex(store: UserBaseStore) {
   return index;
 }
 
+function computeWeightedRating(
+  baseRating: number | null,
+  userRatings: WeightedUserRating[]
+) {
+  const baseWeight = typeof baseRating === "number" ? 10 : 0;
+  const totalWeight = baseWeight + userRatings.reduce((sum, item) => sum + item.weight, 0);
+  if (totalWeight <= 0) return null;
+
+  const totalScore = (typeof baseRating === "number" ? baseRating * 10 : 0)
+    + userRatings.reduce((sum, item) => sum + item.rating * item.weight, 0);
+
+  return roundUpToOneDecimal(totalScore / totalWeight);
+}
+
 export function computeDisplayedBeerRating(beer: Beer) {
   const store = safeReadStore();
-  const ratings = buildRatingsIndex(store).get(beer.id) ?? [];
-
-  if (ratings.length === 0) {
-    return beer.rating ?? null;
-  }
-
-  const values = [...ratings];
-  if (typeof beer.rating === "number") {
-    values.unshift(beer.rating);
-  }
-
-  if (values.length === 0) return null;
-  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-  return toOneDecimal(avg);
+  const ratings = buildWeightedRatingsIndex(store).get(beer.id) ?? [];
+  return computeWeightedRating(beer.rating, ratings);
 }
 
 export function hydrateBeersWithComputedRatings(beers: Beer[]) {
   const store = safeReadStore();
-  const ratingsIndex = buildRatingsIndex(store);
+  const ratingsIndex = buildWeightedRatingsIndex(store);
 
   return beers.map((beer) => {
-    const ratings = ratingsIndex.get(beer.id) ?? [];
-    if (ratings.length === 0) return beer;
-
-    const values = [...ratings];
-    if (typeof beer.rating === "number") {
-      values.unshift(beer.rating);
-    }
-
-    const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const computed = computeWeightedRating(beer.rating, ratingsIndex.get(beer.id) ?? []);
+    if (computed == null) return beer;
     return {
       ...beer,
-      rating: toOneDecimal(avg),
+      rating: computed,
     };
   });
 }
 
 export function getUserBaseBeers(userId: number): Beer[] {
   const store = safeReadStore();
-  const profile = store.users.find((item) => item.userId === userId);
+  const profile = findProfile(store, userId);
   if (!profile) return [];
 
   const beers = readBeersData();
-  const ratingsIndex = buildRatingsIndex(store);
+  const ratingsIndex = buildWeightedRatingsIndex(store);
   const result: Beer[] = [];
 
   for (const entry of [...profile.beers].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))) {
     const beer = beers.find((item) => item.id === entry.beerId);
     if (!beer || !canAccessBeer(beer, { userId })) continue;
 
-    const values = ratingsIndex.get(beer.id) ?? [];
-    const computedRating = values.length > 0
-      ? toOneDecimal(
-          values.reduce((sum, value) => sum + value, typeof beer.rating === "number" ? beer.rating : 0)
-            / (values.length + (typeof beer.rating === "number" ? 1 : 0))
-        )
-      : (beer.rating ?? null);
-
+    const computedRating = computeWeightedRating(beer.rating, ratingsIndex.get(beer.id) ?? []);
     const firstPersonalImage = entry.images[0] || null;
 
     result.push({

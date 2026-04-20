@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { annotateBeerImageVersions } from "@/lib/image-versions";
-import { getUserBaseBeers } from "@/lib/user-base";
+import { getUserBaseBeers, getUserView } from "@/lib/user-base";
 import { getUserFromRequest } from "@/lib/user-auth";
 
 export async function GET(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     {
-      user,
+      user: getUserView(user),
       beers,
     },
     {

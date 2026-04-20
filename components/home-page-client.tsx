@@ -10,7 +10,7 @@ import { BeerGrid } from "@/components/beer-grid";
 import { BeerAdminEditDialog } from "@/components/beer-admin-edit-dialog";
 import { Footer } from "@/components/footer";
 import type { Beer } from "@/lib/types";
-import type { UserSession } from "@/lib/user-auth";
+import type { UserView } from "@/lib/user-view";
 import {
   CATALOG_VIEW_EVENT,
   CATALOG_VIEW_STORAGE_KEY,
@@ -40,7 +40,7 @@ export function HomePageClient({
   initialUser,
 }: {
   initialIsAdmin: boolean;
-  initialUser: UserSession | null;
+  initialUser: UserView | null;
 }) {
   const [publicBeers, setPublicBeers] = useState<Beer[]>([]);
   const [personalBeers, setPersonalBeers] = useState<Beer[]>([]);
@@ -48,7 +48,7 @@ export function HomePageClient({
   const [personalLoading, setPersonalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingBeer, setEditingBeer] = useState<Beer | null>(null);
-  const [user, setUser] = useState<UserSession | null>(initialUser);
+  const [user, setUser] = useState<UserView | null>(initialUser);
   const [catalogMode, setCatalogMode] = useState<CatalogViewMode>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -228,7 +228,7 @@ export function HomePageClient({
     <>
       <Header initialUser={user} showCatalogSwitch />
       <main className="flex-1">
-        <Hero mode={catalogMode} userName={personalDisplayName} />
+        <Hero mode={catalogMode} userName={personalDisplayName} backgroundImageUrl={user?.heroImageUrl || null} />
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-amber-600" />

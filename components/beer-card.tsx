@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Pencil, Star, Beer as BeerIcon } from "lucide-react";
 import { getFlagSrc } from "@/lib/country-meta";
 import { formatBeerPriceApprox } from "@/lib/price-display";
+import { formatBeerRating } from "@/lib/rating-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ export function BeerCard({
               {beer.rating != null && (
                 <span className="flex items-center gap-1 font-medium text-amber-600">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  {beer.rating}
+                  {formatBeerRating(beer.rating)}
                 </span>
               )}
             </div>

@@ -12,9 +12,11 @@ import type { CatalogViewMode } from "@/lib/catalog-view";
 export function Hero({
   mode,
   userName,
+  backgroundImageUrl,
 }: {
   mode: CatalogViewMode;
   userName?: string | null;
+  backgroundImageUrl?: string | null;
 }) {
   const router = useRouter();
   const [addBusy, setAddBusy] = useState(false);
@@ -44,6 +46,14 @@ export function Hero({
     }
   };
 
+  const personalStyle = isPersonal && backgroundImageUrl
+    ? {
+        backgroundImage: `linear-gradient(rgba(255,251,235,0.78), rgba(255,247,237,0.88)), url(${backgroundImageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : undefined;
+
   return (
     <section
       className={`relative overflow-hidden py-16 sm:py-24 ${
@@ -51,6 +61,7 @@ export function Hero({
           ? "bg-gradient-to-br from-amber-100 via-orange-50 to-white"
           : "hero-beer-bg"
       }`}
+      style={personalStyle}
     >
       {!isPersonal && <BeerBubblesBackground />}
 
