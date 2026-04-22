@@ -15,6 +15,8 @@ const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const ADMIN_DIR = path.join(DATA_DIR, "admin");
 const USER_BASES_PATH = path.join(ADMIN_DIR, "user-bases.json");
 
+type PersistedUserInput = Pick<UserSession, "id" | "first_name"> & Partial<Pick<UserSession, "last_name" | "username" | "photo_url">>;
+
 export interface UserBeerEntry {
   beerId: number;
   rating: number | null;
@@ -30,6 +32,7 @@ export interface UserBaseProfile {
   firstName: string;
   lastName?: string;
   username?: string;
+  photoUrl?: string | null;
   customAvatarLocal?: string | null;
   heroImageLocal?: string | null;
   beers: UserBeerEntry[];
@@ -37,6 +40,38 @@ export interface UserBaseProfile {
 
 interface UserBaseStore {
   users: UserBaseProfile[];
+}
+
+export interface AdminUserBeerSummary {
+  beerId: number;
+  beerName: string;
+  rating: number | null;
+  updatedAt: string;
+  addedByUser: boolean;
+}
+
+export interface AdminUserCommentSummary {
+  beerId: number;
+  beerName: string;
+  comment: string;
+  updatedAt: string;
+}
+
+export interface AdminUserSummary {
+  userId: number;
+  firstName: string;
+  lastName?: string;
+  username?: string;
+  avatarUrl: string | null;
+  heroImageUrl: string | null;
+  interactionCount: number;
+  beersCount: number;
+  commentsCount: number;
+  ratingLevel: number;
+  ratingWeight: number;
+  ratingBadgeLabel: string;
+  beers: AdminUserBeerSummary[];
+  comments: AdminUserCommentSummary[];
 }
 
 function ensureAdminDir() {
@@ -70,6 +105,10 @@ function normalizeRating(value: number) {
   return roundToOneDecimal(Math.max(1, Math.min(10, value)));
 }
 
+function normalizeLocalImage(local: string | null | undefined) {
+  return local?.split("?")[0] || null;
+}
+
 function hasAnyInteraction(entry: UserBeerEntry) {
   return entry.addedByUser || entry.rating != null || Boolean(entry.comment) || entry.images.length > 0;
 }
@@ -78,10 +117,11 @@ function findProfile(store: UserBaseStore, userId: number) {
   return store.users.find((item) => item.userId === userId) || null;
 }
 
-function upsertProfile(
-  store: UserBaseStore,
-  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">
-) {
+function getProfileAvatarUrl(profile: UserBaseProfile | null | undefined, fallbackPhotoUrl?: string | null) {
+  return profile?.customAvatarLocal || profile?.photoUrl || fallbackPhotoUrl || null;
+}
+
+function upsertProfile(store: UserBaseStore, user: PersistedUserInput) {
   let profile = findProfile(store, user.id);
 
   if (!profile) {
@@ -90,6 +130,7 @@ function upsertProfile(
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
+      photoUrl: user.photo_url || null,
       customAvatarLocal: null,
       heroImageLocal: null,
       beers: [],
@@ -99,6 +140,11 @@ function upsertProfile(
     profile.firstName = user.first_name;
     profile.lastName = user.last_name;
     profile.username = user.username;
+    if (user.photo_url) {
+      profile.photoUrl = user.photo_url;
+    } else {
+      profile.photoUrl ??= null;
+    }
     profile.customAvatarLocal ??= null;
     profile.heroImageLocal ??= null;
   }
@@ -131,6 +177,29 @@ function hasImage(images: BeerImage[], candidate: BeerImage) {
   return images.some((image) => image.local === candidate.local && image.remote === candidate.remote);
 }
 
+function collectBeerLocalImages(beer: Beer) {
+  const set = new Set<string>();
+
+  const main = normalizeLocalImage(beer.image);
+  if (main) set.add(main);
+
+  if (Array.isArray(beer.images)) {
+    for (const img of beer.images) {
+      const local = normalizeLocalImage(img.local);
+      if (local) set.add(local);
+    }
+  }
+
+  return Array.from(set);
+}
+
+export function ensureUserProfile(user: PersistedUserInput) {
+  const store = safeReadStore();
+  const profile = upsertProfile(store, user);
+  writeStore(store);
+  return profile;
+}
+
 export function getUserBaseProfile(userId: number) {
   const store = safeReadStore();
   return findProfile(store, userId);
@@ -158,7 +227,7 @@ export function getUserView(user: UserSession | null): UserView | null {
 
   return {
     ...user,
-    avatarUrl: profile?.customAvatarLocal || user.photo_url || null,
+    avatarUrl: getProfileAvatarUrl(profile, user.photo_url),
     customAvatarUrl: profile?.customAvatarLocal || null,
     heroImageUrl: profile?.heroImageLocal || null,
     interactionCount,
@@ -170,7 +239,7 @@ export function getUserView(user: UserSession | null): UserView | null {
 }
 
 export function updateUserProfileMedia(input: {
-  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">;
+  user: PersistedUserInput;
   customAvatarLocal?: string | null;
   heroImageLocal?: string | null;
 }) {
@@ -190,7 +259,7 @@ export function updateUserProfileMedia(input: {
 }
 
 export function upsertUserBeerEntry(input: {
-  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">;
+  user: PersistedUserInput;
   beerId: number;
   rating?: number;
   comment?: string | null;
@@ -235,6 +304,26 @@ export function getUserBeerEntry(userId: number, beerId: number) {
   return profile.beers.find((item) => item.beerId === beerId) || null;
 }
 
+export function canUserRotateLocalImage(userId: number, localUrl: string) {
+  const normalized = normalizeLocalImage(localUrl);
+  if (!normalized) return false;
+
+  const profile = getUserBaseProfile(userId);
+  if (!profile) return false;
+
+  for (const entry of profile.beers) {
+    if (entry.images.some((image) => normalizeLocalImage(image.local) === normalized)) {
+      return true;
+    }
+  }
+
+  const beers = readBeersData();
+  return beers.some((beer) => {
+    if (beer.visibility !== "user-only" || beer.ownerUserId !== userId) return false;
+    return collectBeerLocalImages(beer).includes(normalized);
+  });
+}
+
 type WeightedUserRating = {
   rating: number;
   weight: number;
@@ -257,10 +346,7 @@ function buildWeightedRatingsIndex(store: UserBaseStore) {
   return index;
 }
 
-function computeWeightedRating(
-  baseRating: number | null,
-  userRatings: WeightedUserRating[]
-) {
+function computeWeightedRating(baseRating: number | null, userRatings: WeightedUserRating[]) {
   const baseWeight = typeof baseRating === "number" ? 10 : 0;
   const totalWeight = baseWeight + userRatings.reduce((sum, item) => sum + item.weight, 0);
   if (totalWeight <= 0) return null;
@@ -324,8 +410,66 @@ export function getUserBaseBeers(userId: number): Beer[] {
   return result;
 }
 
+export function listUsersForAdmin(): AdminUserSummary[] {
+  const store = safeReadStore();
+  const beers = readBeersData();
+
+  return [...store.users]
+    .map((profile) => {
+      const interactionCount = getUserInteractionCount(profile);
+      const level = getUserLevelInfo(interactionCount);
+      const userBeers = [...profile.beers]
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+        .map((entry) => {
+          const beer = beers.find((item) => item.id === entry.beerId);
+          return {
+            beerId: entry.beerId,
+            beerName: beer?.name || `#${entry.beerId}`,
+            rating: entry.rating,
+            updatedAt: entry.updatedAt,
+            addedByUser: entry.addedByUser,
+          } satisfies AdminUserBeerSummary;
+        });
+
+      const comments = profile.beers
+        .filter((entry) => Boolean(entry.comment))
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+        .map((entry) => {
+          const beer = beers.find((item) => item.id === entry.beerId);
+          return {
+            beerId: entry.beerId,
+            beerName: beer?.name || `#${entry.beerId}`,
+            comment: entry.comment || "",
+            updatedAt: entry.updatedAt,
+          } satisfies AdminUserCommentSummary;
+        });
+
+      return {
+        userId: profile.userId,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        username: profile.username,
+        avatarUrl: getProfileAvatarUrl(profile),
+        heroImageUrl: profile.heroImageLocal || null,
+        interactionCount,
+        beersCount: profile.beers.length,
+        commentsCount: comments.length,
+        ratingLevel: level.level,
+        ratingWeight: level.weight,
+        ratingBadgeLabel: level.badgeLabel,
+        beers: userBeers,
+        comments,
+      } satisfies AdminUserSummary;
+    })
+    .sort((a, b) => {
+      const diff = b.interactionCount - a.interactionCount;
+      if (diff !== 0) return diff;
+      return a.firstName.localeCompare(b.firstName, "ru");
+    });
+}
+
 export function createPersonalBeer(input: {
-  user: Pick<UserSession, "id" | "first_name" | "last_name" | "username">;
+  user: PersistedUserInput;
   name: string;
   country: string | null;
   type: string | null;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getUserView, updateUserProfileMedia } from "@/lib/user-base";
+import { ensureUserProfile, getUserView, updateUserProfileMedia } from "@/lib/user-base";
 import { getUserFromRequest } from "@/lib/user-auth";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  ensureUserProfile(user);
   return NextResponse.json({ user: getUserView(user) }, { headers: { "Cache-Control": "private, no-store" } });
 }
 

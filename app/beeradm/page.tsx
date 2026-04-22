@@ -9,6 +9,8 @@ import { BeeradmImageTools } from "@/components/beeradm-image-tools";
 import { BeeradmLoginForm } from "@/components/beeradm-login-form";
 import { BeeradmLogoutButton } from "@/components/beeradm-logout-button";
 import { BeeradmModerationActions } from "@/components/beeradm-moderation-actions";
+import { BeeradmUsersPanel } from "@/components/beeradm-users-panel";
+import { ModerationImagePreview } from "@/components/moderation-image-preview";
 import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-auth";
 import { formatBeerPriceApprox } from "@/lib/price-display";
 import { formatBeerRating } from "@/lib/rating-display";
@@ -19,6 +21,7 @@ export const dynamic = "force-dynamic";
 const TABS = [
   { key: "home", label: "Главная" },
   { key: "moderation", label: "Модерация" },
+  { key: "users", label: "Пользователи" },
   { key: "base", label: "База" },
   { key: "logs", label: "Логи" },
   { key: "settings", label: "Настройки" },
@@ -48,60 +51,67 @@ function kindLabel(item: ModerationSubmission) {
   return item.payload.kind === "new-beer" ? "Новая карточка" : "Новый отзыв";
 }
 
+function moderationTitle(item: ModerationSubmission) {
+  return item.payload.kind === "new-beer"
+    ? item.payload.name
+    : `Отзыв к карточке #${item.payload.beerId}`;
+}
+
 function renderModerationPayload(item: ModerationSubmission) {
   if (item.payload.kind === "new-beer") {
     return (
-      <div className="space-y-2 text-sm text-gray-700">
-        <div><span className="font-medium">Карточка:</span> #{item.payload.beerId || "—"}</div>
-        <div><span className="font-medium">Название:</span> {item.payload.name}</div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div><span className="font-medium">Страна:</span> {item.payload.country || "—"}</div>
-          <div><span className="font-medium">Тип:</span> {item.payload.type || "—"}</div>
-          <div><span className="font-medium">Сорт:</span> {item.payload.sort || "—"}</div>
-          <div><span className="font-medium">Фильтрация:</span> {item.payload.filtration || "—"}</div>
-          <div>
-            <span className="font-medium">Цена:</span>{" "}
-            {item.payload.price != null ? formatBeerPriceApprox(item.payload.price) : "—"}
-          </div>
-          <div><span className="font-medium">Стартовая оценка:</span> {formatBeerRating(item.payload.rating)}</div>
+      <div className="space-y-4">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Название</div>
+          <h4 className="mt-1 text-lg font-semibold text-gray-900">{item.payload.name}</h4>
         </div>
 
-        {item.payload.novelFields?.length ? (
+        <ModerationImagePreview
+          title={item.payload.name}
+          localImage={item.payload.imageLocal}
+          remoteImage={item.payload.imageRemote}
+        />
+
+        <div className="space-y-3 rounded-xl border bg-gray-50 p-4 text-sm text-gray-700">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div><span className="font-medium">Страна:</span> {item.payload.country || "—"}</div>
+            <div><span className="font-medium">Тип:</span> {item.payload.type || "—"}</div>
+            <div><span className="font-medium">Сорт:</span> {item.payload.sort || "—"}</div>
+            <div><span className="font-medium">Фильтрация:</span> {item.payload.filtration || "—"}</div>
+            <div><span className="font-medium">Цена:</span> {item.payload.price != null ? formatBeerPriceApprox(item.payload.price) : "—"}</div>
+            <div><span className="font-medium">Стартовая оценка:</span> {formatBeerRating(item.payload.rating)}</div>
+          </div>
+
+          {item.payload.novelFields?.length ? (
+            <div>
+              <div className="mb-1 font-medium">Новые значения для общей базы</div>
+              <div className="flex flex-wrap gap-2">
+                {item.payload.novelFields.map((field) => (
+                  <span
+                    key={`${field.field}-${field.value}`}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900"
+                  >
+                    {field.field}: {field.value}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div>
-            <span className="font-medium">Новые значения для общей базы:</span>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {item.payload.novelFields.map((field) => (
-                <span key={`${field.field}-${field.value}`} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">
-                  {field.field}: {field.value}
-                </span>
-              ))}
+            <div className="mb-1 font-medium">Комментарий</div>
+            <div className="whitespace-pre-wrap rounded-md border bg-white px-3 py-2 text-gray-700">
+              {item.payload.comment || "—"}
             </div>
           </div>
-        ) : null}
-
-        <div>
-          <span className="font-medium">Комментарий:</span>
-          <div className="mt-1 whitespace-pre-wrap rounded-md border bg-white px-2 py-1 text-gray-700">
-            {item.payload.comment || "—"}
-          </div>
         </div>
 
-        <div className="grid gap-1">
-          <div>
-            <span className="font-medium">Локальное фото:</span>{" "}
-            {item.payload.imageLocal ? (
-              <a className="text-amber-700 underline" href={item.payload.imageLocal} target="_blank" rel="noreferrer">
-                {item.payload.imageLocal}
-              </a>
-            ) : "—"}
-          </div>
-          <div>
-            <span className="font-medium">Удалённое фото:</span>{" "}
-            {item.payload.imageRemote ? (
-              <a className="text-amber-700 underline" href={item.payload.imageRemote} target="_blank" rel="noreferrer">
-                открыть
-              </a>
-            ) : "—"}
+        <div className="rounded-xl border bg-white p-4 text-sm text-gray-700">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div><span className="font-medium">Карточка:</span> #{item.payload.beerId || "—"}</div>
+            <div><span className="font-medium">Добавлено:</span> {formatDate(item.createdAt)}</div>
+            <div><span className="font-medium">Пользователь:</span> {item.user.first_name}{item.user.username ? ` (@${item.user.username})` : ""}</div>
+            <div><span className="font-medium">Заявка:</span> {item.id}</div>
           </div>
         </div>
       </div>
@@ -109,32 +119,62 @@ function renderModerationPayload(item: ModerationSubmission) {
   }
 
   return (
-    <div className="space-y-2 text-sm text-gray-700">
-      <div><span className="font-medium">Карточка:</span> #{item.payload.beerId}</div>
+    <div className="space-y-4">
       <div>
-        <span className="font-medium">Комментарий:</span>
-        <div className="mt-1 whitespace-pre-wrap rounded-md border bg-white px-2 py-1 text-gray-700">
-          {item.payload.comment || "—"}
+        <div className="text-xs uppercase tracking-wide text-gray-500">Карточка</div>
+        <h4 className="mt-1 text-lg font-semibold text-gray-900">Отзыв к карточке #{item.payload.beerId}</h4>
+      </div>
+
+      <ModerationImagePreview
+        title={`Отзыв к карточке #${item.payload.beerId}`}
+        localImage={item.payload.imageLocal}
+        remoteImage={item.payload.imageRemote}
+      />
+
+      <div className="space-y-3 rounded-xl border bg-gray-50 p-4 text-sm text-gray-700">
+        <div>
+          <div className="mb-1 font-medium">Комментарий</div>
+          <div className="whitespace-pre-wrap rounded-md border bg-white px-3 py-2 text-gray-700">
+            {item.payload.comment || "—"}
+          </div>
         </div>
       </div>
-      <div className="grid gap-1">
-        <div>
-          <span className="font-medium">Локальное фото:</span>{" "}
-          {item.payload.imageLocal ? (
-            <a className="text-amber-700 underline" href={item.payload.imageLocal} target="_blank" rel="noreferrer">
-              {item.payload.imageLocal}
-            </a>
-          ) : "—"}
-        </div>
-        <div>
-          <span className="font-medium">Удалённое фото:</span>{" "}
-          {item.payload.imageRemote ? (
-            <a className="text-amber-700 underline" href={item.payload.imageRemote} target="_blank" rel="noreferrer">
-              открыть
-            </a>
-          ) : "—"}
+
+      <div className="rounded-xl border bg-white p-4 text-sm text-gray-700">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div><span className="font-medium">Карточка:</span> #{item.payload.beerId}</div>
+          <div><span className="font-medium">Добавлено:</span> {formatDate(item.createdAt)}</div>
+          <div><span className="font-medium">Пользователь:</span> {item.user.first_name}{item.user.username ? ` (@${item.user.username})` : ""}</div>
+          <div><span className="font-medium">Заявка:</span> {item.id}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ModerationList({ items }: { items: ModerationSubmission[] }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <div key={item.id} className="rounded-xl border bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+            <div className="text-sm text-gray-800">
+              <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
+            </div>
+            <div className="text-sm text-gray-600">
+              {item.user.first_name}
+              {item.user.username ? ` (@${item.user.username})` : ""}
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+            {renderModerationPayload(item)}
+            <div className="lg:min-w-[150px]">
+              <BeeradmModerationActions submissionId={item.id} />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -206,8 +246,8 @@ export default async function BeeradmPage({
                         <div className="mt-1 text-2xl font-bold text-gray-900">{overview?.imagesCount ?? 0}</div>
                       </div>
                       <div className="rounded-xl border bg-white p-3">
-                        <div className="text-xs uppercase tracking-wide text-gray-500">Thumbnails</div>
-                        <div className="mt-1 text-2xl font-bold text-gray-900">{overview?.thumbsCount ?? 0}</div>
+                        <div className="text-xs uppercase tracking-wide text-gray-500">Пользователей</div>
+                        <div className="mt-1 text-2xl font-bold text-gray-900">{overview?.users?.length ?? 0}</div>
                       </div>
                       <div className="rounded-xl border bg-white p-3">
                         <div className="text-xs uppercase tracking-wide text-gray-500">Последний sync</div>
@@ -231,30 +271,8 @@ export default async function BeeradmPage({
                     <div className="space-y-6">
                       <div className="space-y-4">
                         <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Отзывы на модерацию</h3>
-
                         {overview?.moderationPendingReviews?.length ? (
-                          <div className="space-y-3">
-                            {overview.moderationPendingReviews.map((item) => (
-                              <div key={item.id} className="rounded-xl border bg-white p-3">
-                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-                                  <div className="text-sm text-gray-800">
-                                    <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
-                                  </div>
-                                  <div className="text-sm text-gray-600">
-                                    {item.user.first_name}
-                                    {item.user.username ? ` (@${item.user.username})` : ""}
-                                  </div>
-                                </div>
-
-                                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                                  {renderModerationPayload(item)}
-                                  <div className="lg:min-w-[150px]">
-                                    <BeeradmModerationActions submissionId={item.id} />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          <ModerationList items={overview.moderationPendingReviews} />
                         ) : (
                           <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
                             Новых отзывов на модерацию нет.
@@ -264,30 +282,8 @@ export default async function BeeradmPage({
 
                       <div className="space-y-4 border-t pt-4">
                         <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Новые / изменённые карточки</h3>
-
                         {overview?.moderationPendingCards?.length ? (
-                          <div className="space-y-3">
-                            {overview.moderationPendingCards.map((item) => (
-                              <div key={item.id} className="rounded-xl border bg-white p-3">
-                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-                                  <div className="text-sm text-gray-800">
-                                    <span className="font-semibold">{kindLabel(item)}</span> • {formatDate(item.createdAt)}
-                                  </div>
-                                  <div className="text-sm text-gray-600">
-                                    {item.user.first_name}
-                                    {item.user.username ? ` (@${item.user.username})` : ""}
-                                  </div>
-                                </div>
-
-                                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                                  {renderModerationPayload(item)}
-                                  <div className="lg:min-w-[150px]">
-                                    <BeeradmModerationActions submissionId={item.id} />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          <ModerationList items={overview.moderationPendingCards} />
                         ) : (
                           <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
                             Новых карточек на модерацию нет.
@@ -322,7 +318,7 @@ export default async function BeeradmPage({
                                       {item.status}
                                     </td>
                                     <td className="px-3 py-2 whitespace-pre-wrap text-gray-700">
-                                      {item.note || item.payload.comment || "—"}
+                                      {item.note || (item.payload.kind === "new-beer" ? item.payload.comment : item.payload.comment) || "—"}
                                     </td>
                                   </tr>
                                 ))}
@@ -333,6 +329,18 @@ export default async function BeeradmPage({
                           <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">История модерации пока пустая.</div>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {activeTab === "users" && (
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900">Пользователи и их базы</h3>
+                        <p className="text-sm text-gray-600">
+                          Здесь видны зарегистрированные пользователи, их ачивки, база пива и комментарии.
+                        </p>
+                      </div>
+                      <BeeradmUsersPanel users={overview?.users || []} />
                     </div>
                   )}
 

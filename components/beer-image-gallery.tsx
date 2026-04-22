@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { BeerImage } from "@/lib/types";
 
@@ -24,18 +24,31 @@ type GenerateJob = {
   updatedAt: string;
 };
 
+function normalizeLocalImage(local: string | null | undefined) {
+  return local?.split("?")[0] || null;
+}
+
 export function BeerImageGallery({
   images,
   alt,
   isAdmin = false,
   beerId,
+  allowUserRotate = false,
+  rotatableLocals = [],
 }: {
   images: BeerImage[];
   alt: string;
   isAdmin?: boolean;
   beerId?: number;
+  allowUserRotate?: boolean;
+  rotatableLocals?: string[];
 }) {
   const router = useRouter();
+
+  const rotatableLocalSet = useMemo(
+    () => new Set(rotatableLocals.map((item) => normalizeLocalImage(item)).filter(Boolean)),
+    [rotatableLocals]
+  );
 
   const normalized = useMemo(() => {
     const seen = new Set<string>();
@@ -67,6 +80,7 @@ export function BeerImageGallery({
 
     return result;
   }, [images]);
+
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const [rotateBusy, setRotateBusy] = useState<"cw" | "ccw" | null>(null);
@@ -143,6 +157,14 @@ export function BeerImageGallery({
 
   const activeIndex = Math.max(0, Math.min(active, normalized.length - 1));
   const current = normalized[activeIndex] || normalized[0];
+  const currentNormalizedLocal = normalizeLocalImage(current?.local);
+  const canRotateCurrent = Boolean(
+    currentNormalizedLocal
+      && (isAdmin || (allowUserRotate && rotatableLocalSet.has(currentNormalizedLocal)))
+  );
+  const rotateEndpoint = isAdmin ? "/api/beeradm/images" : "/api/user/images";
+  const generatedImageUrl = generateJob?.status === "succeeded" ? (generateJob.resultImageUrl || null) : null;
+  const generatedJobModel = generateJob?.status === "succeeded" ? generateJob.model : null;
   const isCurrentMainLoaded = Boolean(current?.main && loadedMain[current.main]);
   const isCurrentFullLoaded = Boolean(current?.full && loadedMain[current.full]);
 
@@ -181,14 +203,14 @@ export function BeerImageGallery({
   }, [activeIndex, normalized, loadedMain]);
 
   const rotateCurrent = async (degrees: 90 | -90) => {
-    if (!isAdmin || !current?.local || rotateBusy) return;
+    if ((!isAdmin && !allowUserRotate) || !current?.local || !canRotateCurrent || rotateBusy) return;
 
     setRotateBusy(degrees === 90 ? "cw" : "ccw");
     setRotateErr(null);
     setRotateMsg(null);
 
     try {
-      const res = await fetch("/api/beeradm/images", {
+      const res = await fetch(rotateEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "rotateImage", image: current.local, degrees }),
@@ -346,9 +368,7 @@ export function BeerImageGallery({
             <button
               key={item.main}
               type="button"
-              onClick={() => {
-                setActive(idx);
-              }}
+              onClick={() => setActive(idx)}
               className={`overflow-hidden rounded-2xl border bg-white ${idx === activeIndex ? "ring-2 ring-amber-500" : "opacity-90 hover:opacity-100"}`}
             >
               <div className="aspect-square overflow-hidden bg-white">
@@ -368,111 +388,115 @@ export function BeerImageGallery({
         </div>
       )}
 
-      {isAdmin && (
+      {(isAdmin || allowUserRotate) && (
         <div className="mt-3 rounded-xl border bg-amber-50 p-3">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
-            Админ: поворот выбранного фото
+            {isAdmin ? "Админ: поворот выбранного фото" : "Моя база: поворот выбранного фото"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !current?.local} onClick={() => rotateCurrent(90)}>
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !canRotateCurrent} onClick={() => rotateCurrent(90)}>
               {rotateBusy === "cw" ? "..." : "+90°"}
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !current?.local} onClick={() => rotateCurrent(-90)}>
+            <Button type="button" size="sm" variant="outline" disabled={Boolean(rotateBusy) || !canRotateCurrent} onClick={() => rotateCurrent(-90)}>
               {rotateBusy === "ccw" ? "..." : "-90°"}
             </Button>
-            <span className="text-xs text-gray-600">Будет повернуто только текущее выбранное фото</span>
+            <span className="text-xs text-gray-600">
+              {canRotateCurrent ? "Будет повернуто только текущее выбранное фото" : "Это фото нельзя повернуть из текущего режима"}
+            </span>
           </div>
           {rotateErr && <div className="mt-2 text-xs text-red-600">{rotateErr}</div>}
           {rotateMsg && <div className="mt-2 text-xs text-emerald-700">{rotateMsg}</div>}
 
-          <div className="mt-3 border-t border-amber-200 pt-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
-              Поиск более качественного фото
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("lens")}>
-                {searchBusy === "lens" ? "Ищу..." : "Поиск по картинке"}
-              </Button>
-              <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("name")}>
-                {searchBusy === "name" ? "Ищу..." : "Поиск по названию"}
-              </Button>
-            </div>
+          {isAdmin && (
+            <div className="mt-3 border-t border-amber-200 pt-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+                Поиск более качественного фото
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("lens")}>
+                  {searchBusy === "lens" ? "Ищу..." : "Поиск по картинке"}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={Boolean(searchBusy)} onClick={() => runSearch("name")}>
+                  {searchBusy === "name" ? "Ищу..." : "Поиск по названию"}
+                </Button>
+              </div>
 
-            {searchErr && <div className="mt-2 text-xs text-red-600">{searchErr}</div>}
+              {searchErr && <div className="mt-2 text-xs text-red-600">{searchErr}</div>}
 
-            {searchResults.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {searchResults.map((res) => (
-                  <div key={res.imageUrl} className="overflow-hidden rounded-lg border bg-white">
-                    <div className="aspect-square overflow-hidden bg-stone-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={res.imageUrl} alt={`${alt} — найденное фото`} className="h-full w-full object-cover" />
+              {searchResults.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {searchResults.map((res) => (
+                    <div key={res.imageUrl} className="overflow-hidden rounded-lg border bg-white">
+                      <div className="aspect-square overflow-hidden bg-stone-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={res.imageUrl} alt={`${alt} — найденное фото`} className="h-full w-full object-cover" />
+                      </div>
+                      <div className="space-y-1 p-2">
+                        <div className="line-clamp-2 text-[11px] text-gray-700" title={res.title}>{res.title}</div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full"
+                          disabled={Boolean(applyBusyUrl)}
+                          onClick={() => applyAsPrimary(res)}
+                        >
+                          {applyBusyUrl === res.imageUrl ? "Применяю..." : "Сделать основным"}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-1 p-2">
-                      <div className="line-clamp-2 text-[11px] text-gray-700" title={res.title}>{res.title}</div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 border-t border-amber-200 pt-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+                  Генерация фото на белом фоне
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("start")}>
+                    {generateBusy === "start" ? "Генерирую..." : "Сгенерировать картинку"}
+                  </Button>
+                  {generatedImageUrl && (
+                    <>
                       <Button
                         type="button"
                         size="sm"
-                        className="w-full"
                         disabled={Boolean(applyBusyUrl)}
-                        onClick={() => applyAsPrimary(res)}
+                        onClick={() => applyRemoteImage(generatedImageUrl)}
                       >
-                        {applyBusyUrl === res.imageUrl ? "Применяю..." : "Сделать основным"}
+                        {applyBusyUrl === generatedImageUrl ? "Применяю..." : "Поставить на главную"}
                       </Button>
-                    </div>
+                      <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("regen")}>
+                        {generateBusy === "regen" ? "Перегенерирую..." : "Перегенерировать"}
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {generateErr && <div className="mt-2 text-xs text-red-600">{generateErr}</div>}
+
+                {generateJob?.status === "pending" && (
+                  <div className="mt-2 rounded-lg border bg-white p-2">
+                    <div className="mb-1 text-xs text-gray-600">Генерация выполняется ({generateJob.model})...</div>
+                    <div className="h-24 animate-pulse rounded bg-gray-100" />
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            <div className="mt-3 border-t border-amber-200 pt-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
-                Генерация фото на белом фоне
-              </div>
+                {generateJob?.status === "failed" && (
+                  <div className="mt-2 text-xs text-red-600">Генерация не удалась: {generateJob.error || "unknown error"}</div>
+                )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("start")}>
-                  {generateBusy === "start" ? "Генерирую..." : "Сгенерировать картинку"}
-                </Button>
-                {generateJob?.status === "succeeded" && generateJob.resultImageUrl && (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={Boolean(applyBusyUrl)}
-                      onClick={() => applyRemoteImage(generateJob.resultImageUrl!)}
-                    >
-                      {applyBusyUrl === generateJob.resultImageUrl ? "Применяю..." : "Поставить на главную"}
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" disabled={Boolean(generateBusy)} onClick={() => startGenerate("regen")}>
-                      {generateBusy === "regen" ? "Перегенерирую..." : "Перегенерировать"}
-                    </Button>
-                  </>
+                {generatedImageUrl && (
+                  <div className="mt-2 overflow-hidden rounded-lg border bg-white p-2">
+                    <div className="mb-1 text-xs text-gray-600">Сгенерированный вариант ({generatedJobModel || "model"})</div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={generatedImageUrl} alt={`${alt} — сгенерированное фото`} className="h-44 w-full rounded object-contain" />
+                  </div>
                 )}
               </div>
-
-              {generateErr && <div className="mt-2 text-xs text-red-600">{generateErr}</div>}
-
-              {generateJob?.status === "pending" && (
-                <div className="mt-2 rounded-lg border bg-white p-2">
-                  <div className="mb-1 text-xs text-gray-600">Генерация выполняется ({generateJob.model})...</div>
-                  <div className="h-24 animate-pulse rounded bg-gray-100" />
-                </div>
-              )}
-
-              {generateJob?.status === "failed" && (
-                <div className="mt-2 text-xs text-red-600">Генерация не удалась: {generateJob.error || "unknown error"}</div>
-              )}
-
-              {generateJob?.status === "succeeded" && generateJob.resultImageUrl && (
-                <div className="mt-2 overflow-hidden rounded-lg border bg-white p-2">
-                  <div className="mb-1 text-xs text-gray-600">Сгенерированный вариант ({generateJob.model})</div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={generateJob.resultImageUrl} alt={`${alt} — сгенерированное фото`} className="h-44 w-full rounded object-contain" />
-                </div>
-              )}
             </div>
-          </div>
+          )}
         </div>
       )}
 

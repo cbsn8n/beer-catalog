@@ -47,7 +47,13 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
   const rating = Math.max(0, Math.min(10, Math.round(displayedRating ?? 0)));
   const imageVersion = getImageVersion(beer.image);
 
-  const images = beer.images?.length
+  const personalImages = userBeerEntry?.images?.map((img) => ({
+    local: img.local,
+    version: img.local ? getImageVersion(img.local) : null,
+    remote: img.remote ?? null,
+  })) || [];
+
+  const beerImages = beer.images?.length
     ? beer.images.map((img) => ({
         local: img.local,
         version: img.local ? getImageVersion(img.local) : null,
@@ -56,6 +62,18 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
     : beer.image || beer.imageRemote
       ? [{ local: beer.image, version: imageVersion, remote: beer.imageRemote ?? null }]
       : [];
+
+  const images = [...personalImages, ...beerImages].filter((img, index, arr) => {
+    const key = `${img.local || ""}|${img.remote || ""}`;
+    return arr.findIndex((item) => `${item.local || ""}|${item.remote || ""}` === key) === index;
+  });
+
+  const userRotatableLocals = [
+    ...(userBeerEntry?.images?.map((img) => img.local).filter(Boolean) || []),
+    ...(beer.visibility === "user-only" && beer.ownerUserId === user?.id
+      ? (beer.images?.map((img) => img.local).filter(Boolean) || []).concat(beer.image ? [beer.image] : [])
+      : []),
+  ] as string[];
 
   const beerForAdminEdit: Beer = {
     ...beer,
@@ -81,7 +99,14 @@ export default async function BeerPage({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-8 md:grid-cols-[420px_1fr]">
             <div>
-              <BeerImageGallery images={images} alt={beer.name} isAdmin={isAdmin} beerId={beer.id} />
+              <BeerImageGallery
+                images={images}
+                alt={beer.name}
+                isAdmin={isAdmin}
+                beerId={beer.id}
+                allowUserRotate={Boolean(user && userRotatableLocals.length > 0 && !isAdmin)}
+                rotatableLocals={userRotatableLocals}
+              />
             </div>
 
             <div>

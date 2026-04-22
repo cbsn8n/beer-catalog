@@ -10,6 +10,7 @@ import {
   readBeersData,
   writeBeersData,
 } from "@/lib/beers-store";
+import { listUsersForAdmin } from "@/lib/user-base";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const ADMIN_DIR = path.join(DATA_DIR, "admin");
@@ -406,5 +407,6 @@ export function getBeeradmOverview() {
     moderationPendingReviews,
     moderationPendingCards,
     moderationRecent: moderation.slice(0, 30),
+    users: listUsersForAdmin(),
   };
 }

@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { ensureUserProfile } from "@/lib/user-base";
 import { USER_COOKIE_NAME, createUserSessionToken, getUserCookieOptions, type UserSession } from "@/lib/user-auth";
 
 function getPublicBaseUrl(req: NextRequest) {
@@ -89,6 +90,8 @@ export async function GET(req: NextRequest) {
     photo_url: params.get("photo_url") || undefined,
     auth_date: Number(params.get("auth_date")) || Math.floor(Date.now() / 1000),
   };
+
+  ensureUserProfile(user);
 
   const token = createUserSessionToken(user);
   const res = NextResponse.redirect(toPublicUrl(req, "/"));
